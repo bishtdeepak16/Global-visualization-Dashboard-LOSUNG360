@@ -94,6 +94,14 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .panel-title{font-family:'Sora',sans-serif;font-size:14px;font-weight:700;}
 .panel-sub{font-size:11px;color:var(--ink-soft);margin-top:2px;}
 .panel-head-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.btn-viz-export{
+  background:none;border:1px solid var(--line);border-radius:7px;
+  padding:4px 10px;font-size:10.5px;font-weight:700;cursor:pointer;
+  color:var(--ink-soft);font-family:'Inter',sans-serif;
+  display:flex;align-items:center;gap:4px;transition:all .15s;
+  white-space:nowrap;
+}
+.btn-viz-export:hover{border-color:var(--orange);color:var(--orange);background:var(--peach-soft);}
 .tag{font-size:10px;font-weight:800;padding:4px 9px;border-radius:7px;background:linear-gradient(135deg,var(--peach-soft),var(--peach));color:var(--orange-deep);text-transform:uppercase;letter-spacing:.5px;border:1px solid rgba(255,106,50,.15);white-space:nowrap;}
 .tag.gold{background:linear-gradient(135deg,#FFF9E6,#FDECC4);color:#8B6914;border:1px solid rgba(201,168,66,.25);}
 .chart-box{position:relative;width:100%;}
@@ -267,12 +275,12 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Revenue Breakdown</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
     <div class="grid grid-2b" style="margin-bottom:18px;">
       <div class="panel" style="position:relative;">
-        <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Top 10 SKUs by Revenue</div><div class="panel-sub">SUM total_price per SKU</div></div><span class="tag gold">Revenue</span></div>
+        <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Top 10 SKUs by Revenue</div><div class="panel-sub">SUM total_price per SKU</div></div><div style="display:flex;align-items:center;gap:6px;"><button class="btn-viz-export" onclick="exportViz('top_skus')">⬇ Export</button><span class="tag gold">Revenue</span></div></div>
         <div class="chart-box" style="height:280px;"><canvas id="chartTopSkuRev"></canvas></div>
         <div class="loading-overlay" id="load-sku"><div class="spinner"></div></div>
       </div>
       <div class="panel" style="position:relative;">
-        <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Category-wise Revenue</div><div class="panel-sub">Revenue by category_name (dim_category)</div></div><span class="tag gold">Revenue</span></div>
+        <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Category-wise Revenue</div><div class="panel-sub">Revenue by category_name (dim_category)</div></div><div style="display:flex;align-items:center;gap:6px;"><button class="btn-viz-export" onclick="exportViz('category_rev')">⬇ Export</button><span class="tag gold">Revenue</span></div></div>
         <div class="chart-box" style="height:280px;"><canvas id="chartCategoryRev"></canvas></div>
         <div class="loading-overlay" id="load-cat"><div class="spinner"></div></div>
       </div>
@@ -285,7 +293,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <div class="panel" style="position:relative;">
         <div class="panel-head">
           <div class="panel-head-left"><div class="panel-title">Client-wise Order Volume</div><div class="panel-sub">Orders per client in selected period</div></div>
-          <span class="tag">Count</span>
+          <div style="display:flex;align-items:center;gap:6px;"><button class="btn-viz-export" onclick="exportViz('client_volume')">⬇ Export</button><span class="tag">Count</span></div>
         </div>
         <div class="chart-box" style="height:280px;"><canvas id="chartClientVolume"></canvas></div>
         <div class="loading-overlay" id="load-client"><div class="spinner"></div></div>
@@ -293,8 +301,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <!-- Courier: VERTICAL bar -->
       <div class="panel" style="position:relative;">
         <div class="panel-head">
-          <div class="panel-head-left"><div class="panel-title">Courier-wise Shipments</div><div class="panel-sub">courier_normalized from dim_courier</div></div>
-          <span class="tag">Count</span>
+          <div class="panel-head-left"><div class="panel-title">Shipping Provider-wise Shipments</div><div class="panel-sub">shipping_provider → dim_courier (normalized)</div></div>
+          <div style="display:flex;align-items:center;gap:6px;"><button class="btn-viz-export" onclick="exportViz('courier')">⬇ Export</button><span class="tag">Count</span></div>
         </div>
         <div class="chart-box" style="height:280px;"><canvas id="chartCourierVolume"></canvas></div>
         <div class="loading-overlay" id="load-courier"><div class="spinner"></div></div>
@@ -341,7 +349,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Fulfilment TAT Adherence</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
     <div class="grid grid-2b">
       <div class="panel" style="position:relative;">
-        <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Within TAT vs Post-TAT by Client</div><div class="panel-sub">Orders before vs after fulfillment_tat</div></div><span class="tag">TAT</span></div>
+        <div class="panel-head"><div class="panel-head-left"><div class="panel-title" style="display:flex;align-items:center;gap:8px;">Within TAT vs Post-TAT by Client <button class="btn-viz-export" onclick="exportViz('tat')">⬇ Export</button></div><div class="panel-sub">Orders before vs after fulfillment_tat</div></div><span class="tag">TAT</span></div>
         <div class="chart-box" style="height:280px;"><canvas id="chartTATAdherence"></canvas></div>
         <div class="loading-overlay" id="load-tat"><div class="spinner"></div></div>
       </div>
@@ -408,7 +416,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 </div><!-- .main -->
 
 <script>
-const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwXIJJeNUXvst-yTGdjWAtCgCTKhudtMdh2ePNBBLJClcRm2UXDubPPXf0WnTth1PN_3g/exec';
+const WEBAPP_URL = 'PASTE_YOUR_WEBAPP_URL_HERE';
 
 Chart.defaults.font.family = "'Inter', sans-serif";
 Chart.defaults.color = '#6B6660';
@@ -800,6 +808,34 @@ async function loadSaleOrders(){
     if(!items.length) items.push({i:'💡',t:'All metrics within normal range',p:'No anomalies detected in selected period.'});
     items.forEach(x=>{ ins.innerHTML+=`<div class="insight-card"><div class="idot">${x.i}</div><div><h4>${x.t}</h4><p>${x.p}</p></div></div>`; });
   }
+}
+
+// ---- PER-VISUAL EXPORT ----
+async function exportViz(vizKey) {
+  const moduleMap = {
+    top_skus:      { module: 'sale_orders_top_skus',   topN: 100, filename: 'top_skus_revenue.csv' },
+    category_rev:  { module: 'sale_orders_by_category',topN: 50,  filename: 'category_revenue.csv' },
+    client_volume: { module: 'sale_orders_by_client',             filename: 'client_volume.csv' },
+    courier:       { module: 'sale_orders_by_courier',            filename: 'courier_shipments.csv' },
+    tat:           { module: 'sale_orders_tat',                   filename: 'tat_adherence.csv' },
+  };
+  const cfg = moduleMap[vizKey];
+  if (!cfg) return;
+  const btn = event.target;
+  const orig = btn.textContent;
+  btn.textContent = '⏳'; btn.disabled = true;
+  const extra = cfg.topN ? { topN: cfg.topN } : {};
+  const rows = await fetchData(cfg.module, extra);
+  if (rows && rows.length) {
+    downloadCsv(jsonToCsv(rows), cfg.filename);
+  }
+  btn.textContent = orig; btn.disabled = false;
+}
+
+// Also add special uncategorised drill-down
+async function exportUncategorised() {
+  const rows = await fetchData('sale_orders_by_category', { topN: 100 });
+  if (rows) downloadCsv(jsonToCsv(rows), 'category_revenue_full.csv');
 }
 
 // ---- EXPORT ----
