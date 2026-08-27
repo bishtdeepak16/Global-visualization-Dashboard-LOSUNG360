@@ -27,6 +27,36 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 @keyframes fadein{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 @keyframes spin{to{transform:rotate(360deg)}}
 
+
+/* ── Expiry slabs ─────────────────────────────────── */
+.expiry-slab{border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:6px;}
+.expiry-slab.critical{background:linear-gradient(120deg,rgba(221,75,57,.08),rgba(221,75,57,.04));border:1px solid rgba(221,75,57,.2);}
+.expiry-slab.warning{background:linear-gradient(120deg,rgba(255,178,56,.08),rgba(255,178,56,.04));border:1px solid rgba(255,178,56,.2);}
+.expiry-slab.watch{background:linear-gradient(120deg,rgba(201,168,66,.08),rgba(201,168,66,.04));border:1px solid rgba(201,168,66,.2);}
+.slab-badge{font-size:11px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;}
+.slab-items{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px;}
+.slab-item{background:rgba(28,26,23,.05);border-radius:7px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--ink);}
+.slab-empty{font-size:12px;color:var(--green);font-weight:600;}
+/* ── Donut legend rows ────────────────────────────── */
+.donut-legend-row{display:flex;align-items:center;gap:8px;}
+.dlr-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.dlr-label{flex:1;font-size:12px;font-weight:600;color:var(--ink-soft);}
+.dlr-val{font-size:13px;font-weight:800;font-family:'Sora',sans-serif;color:var(--ink);}
+/* ── Dynamic legend rows (putaway type/status) ─────── */
+.dyn-legend-row{display:flex;align-items:center;gap:8px;}
+.dyn-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.dyn-label{flex:1;font-size:12px;font-weight:600;color:var(--ink-soft);}
+.dyn-val{font-size:13px;font-weight:800;font-family:'Sora',sans-serif;color:var(--ink);}
+/* ── Dead stock table ─────────────────────────────── */
+.dead-row{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);font-size:12px;}
+.dead-row:last-child{border-bottom:none;}
+.dead-sku{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dead-fc{font-size:11px;color:var(--ink-soft);}
+.dead-qty{font-weight:800;font-family:'Sora',sans-serif;color:var(--orange);}
+/* ── Loader ───────────────────────────────────────── */
+.loader-wrap{display:flex;align-items:center;justify-content:center;padding:20px;}
+.spin-ring{width:24px;height:24px;border:3px solid var(--line);border-top-color:var(--orange);border-radius:50%;animation:spin .8s linear infinite;}
+
 /* SIDEBAR */
 .sidebar{width:68px;background:var(--sidebar);display:flex;flex-direction:column;align-items:center;padding:20px 0;position:fixed;top:0;bottom:0;left:0;z-index:20;}
 .sidebar::after{content:'';position:absolute;top:0;right:0;bottom:0;width:1px;background:linear-gradient(180deg,rgba(255,106,50,.25) 0%,rgba(255,106,50,.08) 50%,transparent 100%);}
@@ -394,23 +424,404 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 </div><!-- end page-sale_orders -->
 
 <!-- STUB PAGES -->
+<!-- ═══════════════════════════ INVENTORY PAGE ═══════════════════════════ -->
 <div class="page" id="page-inventory">
-  <div class="topbar"><div class="topbar-left"><div class="eyebrow"><span class="dot"></span> Losung360</div><h1>Inventory</h1></div></div>
-  <div class="pill-toggle" data-group="inventory" style="margin-bottom:20px;"><button class="active" data-view="viz">📊 Visualisation</button><button data-view="analytics">🧠 Analytics</button></div>
-  <div class="view active" id="inventory-viz"><div style="padding:60px;text-align:center;color:var(--ink-soft);">Inventory module — coming in next build</div></div>
-  <div class="view" id="inventory-analytics"></div>
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="eyebrow"><span class="dot"></span> Losung360 · Stock Intelligence</div>
+      <h1>Inventory</h1>
+    </div>
+    <div class="topbar-right">
+      <div class="date-chip" id="inv-date-chip">📅 Latest Snapshot</div>
+      <button class="btn-export" id="btn-export-inv">⬇ Export Excel</button>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <select id="inv-client"><option value="All">All Clients</option></select>
+    <select id="inv-facility"><option value="All">All FCs</option></select>
+    <select id="inv-inv-type"><option value="All">All Types</option><option>GOOD_INVENTORY</option><option>BAD_INVENTORY</option><option>QC_REJECTED</option></select>
+    <div class="filter-divider"></div>
+    <span class="date-label">Snapshot</span>
+    <input type="date" id="inv-snapshot" />
+    <button class="btn-filter" onclick="loadInventory()">Apply</button>
+  </div>
+
+  <!-- KPI Row -->
+  <div class="kpi-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px;">
+    <div class="kpi-card">
+      <div class="kpi-top"><span class="kpi-label">Total On-hand</span><div class="kpi-icon">📦</div></div>
+      <div class="kpi-value" id="inv-kpi-onhand">—</div>
+      <div class="kpi-delta neutral">Units across all facilities</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-top"><span class="kpi-label">Blocked Qty</span><div class="kpi-icon">🔒</div></div>
+      <div class="kpi-value" id="inv-kpi-blocked">—</div>
+      <div class="kpi-delta neutral" id="inv-kpi-blocked-pct">% of total</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-top"><span class="kpi-label">Damaged Qty</span><div class="kpi-icon">⚠️</div></div>
+      <div class="kpi-value" id="inv-kpi-damaged">—</div>
+      <div class="kpi-delta neutral" id="inv-kpi-damaged-pct">% of total</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-top"><span class="kpi-label">Stock Health</span><div class="kpi-icon">💚</div></div>
+      <div class="kpi-value" id="inv-kpi-health">—</div>
+      <div class="kpi-delta neutral">Good ÷ Total inventory</div>
+    </div>
+  </div>
+
+  <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Stock Composition</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
+  <div class="grid grid-2b" style="margin-bottom:14px;">
+    <!-- Inventory Type Split donut -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-left"><div class="panel-title">Inventory Type Split</div><div class="panel-sub">GOOD · BAD · QC Rejected</div></div>
+        <button class="btn-viz-export" onclick="exportInvViz('inv_type')">⬇ Export</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:24px;">
+        <div style="position:relative;width:160px;height:160px;flex-shrink:0;">
+          <canvas id="chartInvType"></canvas>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
+            <div style="font-size:10px;font-weight:700;color:var(--ink-soft);letter-spacing:.3px;">HEALTH</div>
+            <div style="font-family:'Sora',sans-serif;font-size:20px;font-weight:800;" id="inv-donut-health">—</div>
+          </div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:10px;">
+          <div class="donut-legend-row"><div class="dlr-dot" style="background:var(--green)"></div><span class="dlr-label">Good Inventory</span><span class="dlr-val" id="inv-lv-good">—</span></div>
+          <div class="donut-legend-row"><div class="dlr-dot" style="background:var(--amber)"></div><span class="dlr-label">Blocked</span><span class="dlr-val" id="inv-lv-blocked">—</span></div>
+          <div class="donut-legend-row"><div class="dlr-dot" style="background:var(--red)"></div><span class="dlr-label">QC Rejected / Bad</span><span class="dlr-val" id="inv-lv-damaged">—</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- Stock Trend line -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-left"><div class="panel-title">Stock Trend over Time</div><div class="panel-sub">Daily snapshot — good inventory only</div></div>
+        <button class="btn-viz-export" onclick="exportInvViz('inv_trend')">⬇ Export</button>
+      </div>
+      <div id="load-inv-trend" class="loader-wrap"><div class="spin-ring"></div></div>
+      <div style="height:148px;"><canvas id="chartInvTrend"></canvas></div>
+    </div>
+  </div>
+
+  <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Distribution</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
+  <div class="grid grid-2b" style="margin-bottom:14px;">
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-left"><div class="panel-title">Client-wise Stock</div><div class="panel-sub">Good inventory by client</div></div>
+        <button class="btn-viz-export" onclick="exportInvViz('inv_client')">⬇ Export</button>
+      </div>
+      <div id="load-inv-client" class="loader-wrap"><div class="spin-ring"></div></div>
+      <div style="height:200px;"><canvas id="chartInvClient"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-left"><div class="panel-title">Facility-wise Stock</div><div class="panel-sub">Good inventory by FC</div></div>
+        <button class="btn-viz-export" onclick="exportInvViz('inv_facility')">⬇ Export</button>
+      </div>
+      <div id="load-inv-facility" class="loader-wrap"><div class="spin-ring"></div></div>
+      <div style="height:200px;"><canvas id="chartInvFacility"></canvas></div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:14px;">
+    <div class="panel-head">
+      <div class="panel-head-left"><div class="panel-title">Category-wise Stock</div><div class="panel-sub">Good inventory by product category</div></div>
+      <button class="btn-viz-export" onclick="exportInvViz('inv_category')">⬇ Export</button>
+    </div>
+    <div id="load-inv-cat" class="loader-wrap"><div class="spin-ring"></div></div>
+    <div style="height:200px;"><canvas id="chartInvCategory"></canvas></div>
+  </div>
+
+  <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Risk Monitoring</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
+  <div class="grid grid-2b" style="margin-bottom:14px;">
+    <!-- Expiry at Risk -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-left"><div class="panel-title">Expiry-at-Risk Stock</div><div class="panel-sub">Items expiring within 90 days</div></div>
+        <button class="btn-viz-export" onclick="exportInvViz('inv_expiry')">⬇ Export</button>
+      </div>
+      <div id="inv-expiry-table">
+        <div class="expiry-slab critical"><div class="slab-badge">🔴 &lt;30 Days</div><div id="inv-exp-30">Loading…</div></div>
+        <div class="expiry-slab warning"><div class="slab-badge">🟠 30–60 Days</div><div id="inv-exp-60">Loading…</div></div>
+        <div class="expiry-slab watch"><div class="slab-badge">🟡 60–90 Days</div><div id="inv-exp-90">Loading…</div></div>
+      </div>
+    </div>
+    <!-- Dead Stock -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-left"><div class="panel-title">Dead Stock</div><div class="panel-sub">SKUs with 0 sale orders in last 30 days</div></div>
+        <button class="btn-viz-export" onclick="exportInvViz('inv_dead')">⬇ Export</button>
+      </div>
+      <div id="inv-dead-table" style="max-height:220px;overflow-y:auto;">
+        <div style="text-align:center;color:var(--ink-soft);padding:40px;font-size:13px;">Loading…</div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<!-- ═══════════════════════════ PUTAWAY PAGE ═══════════════════════════ -->
 <div class="page" id="page-putaway">
-  <div class="topbar"><div class="topbar-left"><div class="eyebrow"><span class="dot"></span> Losung360</div><h1>Putaway</h1></div></div>
-  <div class="pill-toggle" data-group="putaway" style="margin-bottom:20px;"><button class="active" data-view="viz">📊 Visualisation</button><button data-view="analytics">🧠 Analytics</button></div>
-  <div class="view active" id="putaway-viz"><div style="padding:60px;text-align:center;color:var(--ink-soft);">Putaway module — coming in next build</div></div>
-  <div class="view" id="putaway-analytics"></div>
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="eyebrow"><span class="dot"></span> Losung360 · Inbound Ops</div>
+      <h1>Putaway</h1>
+    </div>
+    <div class="topbar-right">
+      <div class="date-chip" id="pta-date-chip">📅 All Time</div>
+      <button class="btn-export" id="btn-export-pta">⬇ Export Excel</button>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <select id="pta-client"><option value="All">All Clients</option></select>
+    <select id="pta-facility"><option value="All">All FCs</option></select>
+    <div class="filter-divider"></div>
+    <span class="date-label">From</span>
+    <input type="date" id="pta-from"/>
+    <span class="date-label">To</span>
+    <input type="date" id="pta-to"/>
+    <button class="btn-filter" onclick="loadPutaway()">Apply</button>
+  </div>
+
+  <!-- KPI Row -->
+  <div class="kpi-row" style="grid-template-columns:repeat(5,1fr);margin-bottom:16px;">
+    <div class="kpi-card">
+      <div class="kpi-top"><span class="kpi-label">Total Batches</span><div class="kpi-icon">🗂️</div></div>
+      <div class="kpi-value" id="pta-kpi-batches">—</div>
+      <div class="kpi-delta neutral">Distinct putaway codes</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-top"><span class="kpi-label">Units Putaway</span><div class="kpi-icon">📦</div></div>
+      <div class="kpi-value" id="pta-kpi-units">—</div>
+      <div class="kpi-delta neutral">Total quantity moved</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-top"><span class="kpi-label">Completion Rate</span><div class="kpi-icon">✅</div></div>
+      <div class="kpi-value" id="pta-kpi-completion">—</div>
+      <div class="kpi-delta neutral">COMPLETE ÷ total items</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-top"><span class="kpi-label">Pending Putaways</span><div class="kpi-icon">⏳</div></div>
+      <div class="kpi-value" id="pta-kpi-pending">—</div>
+      <div class="kpi-delta neutral">PENDING or CREATED</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-top"><span class="kpi-label">Rejection Rate</span><div class="kpi-icon">❌</div></div>
+      <div class="kpi-value" id="pta-kpi-rejection">—</div>
+      <div class="kpi-delta neutral">Rejected ÷ total items</div>
+    </div>
+  </div>
+
+  <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Composition</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
+  <div class="grid grid-2b" style="margin-bottom:14px;">
+    <!-- Type Split -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-left"><div class="panel-title">Putaway Type Split</div><div class="panel-sub">GRN · Return · Others</div></div>
+        <button class="btn-viz-export" onclick="exportPtaViz('pta_type')">⬇ Export</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:24px;">
+        <div style="width:160px;height:160px;flex-shrink:0;"><canvas id="chartPtaType"></canvas></div>
+        <div id="pta-type-legend" style="flex:1;display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+    </div>
+    <!-- Status Breakdown -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-left"><div class="panel-title">Status Breakdown</div><div class="panel-sub">COMPLETE · PENDING · REJECTED</div></div>
+        <button class="btn-viz-export" onclick="exportPtaViz('pta_status')">⬇ Export</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:24px;">
+        <div style="width:160px;height:160px;flex-shrink:0;"><canvas id="chartPtaStatus"></canvas></div>
+        <div id="pta-status-legend" style="flex:1;display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Volume Analysis</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
+  <div class="panel" style="margin-bottom:14px;">
+    <div class="panel-head">
+      <div class="panel-head-left"><div class="panel-title">Daily Putaway Volume</div><div class="panel-sub">Units putaway per day</div></div>
+      <button class="btn-viz-export" onclick="exportPtaViz('pta_daily')">⬇ Export</button>
+    </div>
+    <div id="load-pta-daily" class="loader-wrap"><div class="spin-ring"></div></div>
+    <div style="height:180px;"><canvas id="chartPtaDaily"></canvas></div>
+  </div>
+
+  <div class="grid grid-2b" style="margin-bottom:14px;">
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-left"><div class="panel-title">Facility-wise Volume</div><div class="panel-sub">Units putaway by FC</div></div>
+        <button class="btn-viz-export" onclick="exportPtaViz('pta_facility')">⬇ Export</button>
+      </div>
+      <div id="load-pta-fc" class="loader-wrap"><div class="spin-ring"></div></div>
+      <div style="height:200px;"><canvas id="chartPtaFacility"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-left"><div class="panel-title">Client-wise Volume</div><div class="panel-sub">Units putaway by client</div></div>
+        <button class="btn-viz-export" onclick="exportPtaViz('pta_client')">⬇ Export</button>
+      </div>
+      <div id="load-pta-client" class="loader-wrap"><div class="spin-ring"></div></div>
+      <div style="height:200px;"><canvas id="chartPtaClient"></canvas></div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-bottom:14px;">
+    <div class="panel-head">
+      <div class="panel-head-left"><div class="panel-title">Rejection Reason Breakdown</div><div class="panel-sub">Why putaway items were rejected</div></div>
+      <button class="btn-viz-export" onclick="exportPtaViz('pta_rejection')">⬇ Export</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:24px;">
+      <div style="width:160px;height:160px;flex-shrink:0;"><canvas id="chartPtaRejection"></canvas></div>
+      <div id="pta-rejection-legend" style="flex:1;display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+  </div>
 </div>
+
+<!-- ═══════════════════════════ GRN PAGE ═══════════════════════════ -->
 <div class="page" id="page-grn">
-  <div class="topbar"><div class="topbar-left"><div class="eyebrow"><span class="dot"></span> Losung360</div><h1>GRN / Inbound</h1></div></div>
-  <div class="pill-toggle" data-group="grn" style="margin-bottom:20px;"><button class="active" data-view="viz">📊 Visualisation</button><button data-view="analytics">🧠 Analytics</button></div>
-  <div class="view active" id="grn-viz"><div style="padding:60px;text-align:center;color:var(--ink-soft);">GRN module — coming in next build</div></div>
-  <div class="view" id="grn-analytics"></div>
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="eyebrow"><span class="dot"></span> Losung360 · Inbound</div>
+      <h1>GRN / Inbound</h1>
+    </div>
+    <div class="topbar-right">
+      <div class="date-chip" id="grn-date-chip">📅 All Time</div>
+      <button class="btn-export" id="btn-export-grn">⬇ Export Excel</button>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <select id="grn-client"><option value="All">All Clients</option></select>
+    <select id="grn-facility"><option value="All">All FCs</option></select>
+    <div class="filter-divider"></div>
+    <span class="date-label">From</span>
+    <input type="date" id="grn-from"/>
+    <span class="date-label">To</span>
+    <input type="date" id="grn-to"/>
+    <button class="btn-filter" onclick="loadGRN()">Apply</button>
+  </div>
+
+  <!-- KPI Row -->
+  <div class="kpi-row" style="grid-template-columns:repeat(5,1fr);margin-bottom:16px;">
+    <div class="kpi-card">
+      <div class="kpi-top"><span class="kpi-label">Total GRNs</span><div class="kpi-icon">📋</div></div>
+      <div class="kpi-value" id="grn-kpi-total">—</div>
+      <div class="kpi-delta neutral">Distinct GRN codes</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-top"><span class="kpi-label">Units Received</span><div class="kpi-icon">📥</div></div>
+      <div class="kpi-value" id="grn-kpi-units">—</div>
+      <div class="kpi-delta neutral">Total qty received</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-top"><span class="kpi-label">Value Received</span><div class="kpi-icon">💰</div></div>
+      <div class="kpi-value" id="grn-kpi-value">—</div>
+      <div class="kpi-delta neutral">With taxes</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-top"><span class="kpi-label">Rejection Rate</span><div class="kpi-icon">🚫</div></div>
+      <div class="kpi-value" id="grn-kpi-rejection">—</div>
+      <div class="kpi-delta neutral">Rejected ÷ received</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-top"><span class="kpi-label">PO-to-GRN Lead</span><div class="kpi-icon">⏱️</div></div>
+      <div class="kpi-value" id="grn-kpi-lead">—</div>
+      <div class="kpi-delta neutral">Avg days PO → GRN</div>
+    </div>
+  </div>
+
+  <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Volume Trend</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
+  <div class="panel" style="margin-bottom:14px;">
+    <div class="panel-head">
+      <div class="panel-head-left"><div class="panel-title">GRN Volume Trend</div><div class="panel-sub">Daily GRN count and units received</div></div>
+      <button class="btn-viz-export" onclick="exportGRNViz('grn_trend')">⬇ Export</button>
+    </div>
+    <div id="load-grn-trend" class="loader-wrap"><div class="spin-ring"></div></div>
+    <div style="height:200px;"><canvas id="chartGRNTrend"></canvas></div>
+  </div>
+
+  <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Vendor Analysis</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
+  <div class="grid grid-2b" style="margin-bottom:14px;">
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-left"><div class="panel-title">Top Vendors by Volume</div><div class="panel-sub">Units received per vendor</div></div>
+        <button class="btn-viz-export" onclick="exportGRNViz('grn_vendor_vol')">⬇ Export</button>
+      </div>
+      <div id="load-grn-vendor" class="loader-wrap"><div class="spin-ring"></div></div>
+      <div style="height:220px;"><canvas id="chartGRNVendorVol"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-left"><div class="panel-title">Vendor-wise Rejection Rate</div><div class="panel-sub">% rejected by vendor</div></div>
+        <button class="btn-viz-export" onclick="exportGRNViz('grn_vendor_rej')">⬇ Export</button>
+      </div>
+      <div id="load-grn-vendor-rej" class="loader-wrap"><div class="spin-ring"></div></div>
+      <div style="height:220px;"><canvas id="chartGRNVendorRej"></canvas></div>
+    </div>
+  </div>
+
+  <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Inbound Breakdown</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
+  <div class="grid grid-2b" style="margin-bottom:14px;">
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-left"><div class="panel-title">Client-wise Inbound</div><div class="panel-sub">Units received per client</div></div>
+        <button class="btn-viz-export" onclick="exportGRNViz('grn_client')">⬇ Export</button>
+      </div>
+      <div id="load-grn-client" class="loader-wrap"><div class="spin-ring"></div></div>
+      <div style="height:200px;"><canvas id="chartGRNClient"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-left"><div class="panel-title">Category-wise Inbound</div><div class="panel-sub">Units received per category</div></div>
+        <button class="btn-viz-export" onclick="exportGRNViz('grn_category')">⬇ Export</button>
+      </div>
+      <div id="load-grn-cat" class="loader-wrap"><div class="spin-ring"></div></div>
+      <div style="height:200px;"><canvas id="chartGRNCategory"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid grid-2b" style="margin-bottom:14px;">
+    <!-- Rejection Reason Donut -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-left"><div class="panel-title">Rejection Reason Breakdown</div><div class="panel-sub">Why items were rejected at GRN</div></div>
+        <button class="btn-viz-export" onclick="exportGRNViz('grn_rejection')">⬇ Export</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:24px;">
+        <div style="width:160px;height:160px;flex-shrink:0;"><canvas id="chartGRNRejection"></canvas></div>
+        <div id="grn-rejection-legend" style="flex:1;display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+    </div>
+
+    <!-- Expiry Risk Slabs -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-left">
+          <div class="panel-title">Expiry-risk Items</div>
+          <div class="panel-sub">Days remaining from GRN date to expiry</div>
+        </div>
+        <button class="btn-viz-export" onclick="exportGRNViz('grn_expiry')">⬇ Export</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;" id="grn-expiry-slabs">
+        <div class="expiry-slab critical">
+          <div class="slab-badge">🔴 Under 30 Days</div>
+          <div id="grn-exp-30"><span style="color:var(--ink-soft);font-size:12px;">Loading…</span></div>
+        </div>
+        <div class="expiry-slab warning">
+          <div class="slab-badge">🟠 30 – 60 Days</div>
+          <div id="grn-exp-60"><span style="color:var(--ink-soft);font-size:12px;">Loading…</span></div>
+        </div>
+        <div class="expiry-slab watch">
+          <div class="slab-badge">🟡 60 – 90 Days</div>
+          <div id="grn-exp-90"><span style="color:var(--ink-soft);font-size:12px;">Loading…</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 </div><!-- .main -->
@@ -849,11 +1260,501 @@ document.getElementById('btn-export-so').addEventListener('click',async()=>{
   btn.textContent='⬇ Export Excel'; btn.disabled=false;
 });
 
+
+// ══════════════════════════════════════════════════
+// INVENTORY MODULE
+// ══════════════════════════════════════════════════
+let invTrendChart, invClientChart, invFacilityChart, invCatChart, invTypeChart;
+
+function initInventoryCharts() {
+  invTypeChart = new Chart(document.getElementById('chartInvType'), {
+    type: 'doughnut',
+    data: { labels: ['Good','Blocked','Bad/QC Rejected'], datasets: [{ data:[0,0,0], backgroundColor:[GREEN,AMBER,RED], borderWidth:0, cutout:'72%', hoverOffset:6 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } } }
+  });
+  invTrendChart = new Chart(document.getElementById('chartInvTrend'), {
+    type: 'line',
+    data: { labels:[], datasets:[{ label:'Good Stock', data:[], borderColor:GREEN, backgroundColor:'rgba(29,154,108,.1)', fill:true, tension:.4, borderWidth:2.5, pointRadius:0 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
+      scales:{ x:{ grid:{ display:false }, ticks:{ maxTicksLimit:8 } }, y:{ grid:{ color:LINE } } } }
+  });
+  const hBar = { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label: c => fmtCount(c.raw)+' units' } } },
+    scales:{ x:{ grid:{ color:LINE }, ticks:{ callback: v => v>=1000?(v/1000)+'k':v } }, y:{ grid:{ display:false }, ticks:{ font:{ size:11 } } } }
+  };
+  const palette = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'];
+  invClientChart = new Chart(document.getElementById('chartInvClient'), {
+    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:5, barThickness:20 }] }, options: hBar
+  });
+  invFacilityChart = new Chart(document.getElementById('chartInvFacility'), {
+    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:5, barThickness:18 }] }, options: hBar
+  });
+  invCatChart = new Chart(document.getElementById('chartInvCategory'), {
+    type:'bar',
+    data:{ labels:[], datasets:[{ data:[], backgroundColor: c => palette[c.dataIndex % palette.length], borderRadius:5, barThickness:22 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
+      scales:{ x:{ grid:{ display:false }, ticks:{ maxRotation:0, font:{ size:10.5 } } }, y:{ grid:{ color:LINE }, ticks:{ callback: v => v>=1000?(v/1000)+'k':v } } } }
+  });
+}
+
+function getInvFilters() {
+  return { client: document.getElementById('inv-client').value,
+           facility: document.getElementById('inv-facility').value,
+           invType: document.getElementById('inv-inv-type').value,
+           snapshotDate: document.getElementById('inv-snapshot').value };
+}
+
+async function loadInventory() {
+  ['load-inv-trend','load-inv-client','load-inv-facility','load-inv-cat'].forEach(showLoader);
+  ['inv-kpi-onhand','inv-kpi-blocked','inv-kpi-damaged','inv-kpi-health'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.textContent = '—';
+  });
+
+  const f = getInvFilters();
+  const params = { client: f.client, facility: f.facility };
+  if (f.snapshotDate) params.snapshotDate = f.snapshotDate;
+
+  const [kpi, byType, trend, byClient, byFacility, byCat, expiry, dead] = await Promise.all([
+    fetchData('inventory_kpi', params),
+    fetchData('inventory_by_type', params),
+    fetchData('inventory_trend', params),
+    fetchData('inventory_by_client', params),
+    fetchData('inventory_by_facility', params),
+    fetchData('inventory_by_category', params),
+    fetchData('inventory_expiry_risk', params),
+    fetchData('inventory_dead_stock', params),
+  ]);
+
+  if (kpi) {
+    const good = parseFloat(kpi.good_qty)||0, blocked = parseFloat(kpi.blocked_qty)||0,
+          damaged = parseFloat(kpi.damaged_qty)||0, total = good+blocked+damaged;
+    document.getElementById('inv-kpi-onhand').textContent  = fmtCount(total);
+    document.getElementById('inv-kpi-blocked').textContent = fmtCount(blocked);
+    document.getElementById('inv-kpi-damaged').textContent = fmtCount(damaged);
+    const health = total>0 ? (good/total*100).toFixed(1)+'%' : '—';
+    document.getElementById('inv-kpi-health').textContent  = health;
+    document.getElementById('inv-kpi-blocked-pct').textContent = total>0?fmtPct(blocked/total*100)+' of total':'';
+    document.getElementById('inv-kpi-damaged-pct').textContent = total>0?fmtPct(damaged/total*100)+' of total':'';
+  }
+
+  if (byType && byType.length) {
+    const good    = parseFloat(byType.find(r=>r.inventory_type==='GOOD_INVENTORY')?.total_qty)||0;
+    const blocked = parseFloat(byType.find(r=>r.inventory_type==='BAD_INVENTORY')?.total_qty)||0;
+    const damaged = (byType.filter(r=>r.inventory_type!=='GOOD_INVENTORY'&&r.inventory_type!=='BAD_INVENTORY')
+                          .reduce((s,r)=>s+(parseFloat(r.total_qty)||0),0));
+    const t = good+blocked+damaged;
+    invTypeChart.data.datasets[0].data = [good, blocked, damaged];
+    invTypeChart.update();
+    document.getElementById('inv-donut-health').textContent = t>0?fmtPct(good/t*100):'—';
+    document.getElementById('inv-lv-good').textContent    = fmtCount(good);
+    document.getElementById('inv-lv-blocked').textContent = fmtCount(blocked);
+    document.getElementById('inv-lv-damaged').textContent = fmtCount(damaged);
+  }
+
+  if (trend && trend.length) {
+    invTrendChart.data.labels = trend.map(r=>r.snapshot_date);
+    invTrendChart.data.datasets[0].data = trend.map(r=>parseFloat(r.good_qty)||0);
+    invTrendChart.update();
+  }
+  hideLoader('load-inv-trend');
+
+  const palette = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'];
+  if (byClient && byClient.length) {
+    invClientChart.data.labels = byClient.map(r=>r.client_name);
+    invClientChart.data.datasets[0].data = byClient.map(r=>parseFloat(r.good_qty)||0);
+    invClientChart.data.datasets[0].backgroundColor = byClient.map((_,i)=>palette[i%palette.length]);
+    invClientChart.update();
+  }
+  hideLoader('load-inv-client');
+
+  if (byFacility && byFacility.length) {
+    invFacilityChart.data.labels = byFacility.map(r=>r.facility_code);
+    invFacilityChart.data.datasets[0].data = byFacility.map(r=>parseFloat(r.good_qty)||0);
+    invFacilityChart.data.datasets[0].backgroundColor = byFacility.map((_,i)=>palette[i%palette.length]);
+    invFacilityChart.update();
+  }
+  hideLoader('load-inv-facility');
+
+  if (byCat && byCat.length) {
+    invCatChart.data.labels = byCat.map(r=>shortenLabel(r.category_name||r.category,18));
+    invCatChart.data.datasets[0].data = byCat.map(r=>parseFloat(r.good_qty)||0);
+    invCatChart.update();
+  }
+  hideLoader('load-inv-cat');
+
+  // Expiry risk slabs
+  ['30','60','90'].forEach(slab => {
+    const el = document.getElementById('inv-exp-'+slab);
+    const items = (expiry||[]).filter(r => {
+      const d = parseInt(r.days_to_expiry)||0;
+      if (slab==='30') return d>=0 && d<30;
+      if (slab==='60') return d>=30 && d<60;
+      return d>=60 && d<90;
+    });
+    if (!items.length) { el.innerHTML='<span class="slab-empty">✓ No items in this range</span>'; return; }
+    el.innerHTML='<div class="slab-items">'+items.slice(0,12).map(r=>`<div class="slab-item">${shortenLabel(r.item_sku_code,20)} · ${fmtCount(r.quantity)} units · ${r.facility_code}</div>`).join('')+(items.length>12?`<div class="slab-item">+${items.length-12} more</div>`:'')+' </div>';
+  });
+
+  // Dead stock table
+  const deadEl = document.getElementById('inv-dead-table');
+  if (!dead || !dead.length) { deadEl.innerHTML='<div style="text-align:center;color:var(--green);padding:30px;font-size:13px;font-weight:700;">✓ No dead stock detected</div>'; }
+  else {
+    deadEl.innerHTML = dead.map(r=>`<div class="dead-row"><div><div class="dead-sku">${shortenLabel(r.item_sku_code,28)}</div><div class="dead-fc">${r.facility_code}</div></div><div class="dead-qty">${fmtCount(r.quantity)}</div><div style="font-size:10px;color:var(--red);font-weight:700;">0 orders</div></div>`).join('');
+  }
+}
+
+async function exportInvViz(key) {
+  const map = {
+    inv_type:     { module:'inventory_by_type',     file:'inventory_type.csv' },
+    inv_trend:    { module:'inventory_trend',        file:'inventory_trend.csv' },
+    inv_client:   { module:'inventory_by_client',    file:'inventory_by_client.csv' },
+    inv_facility: { module:'inventory_by_facility',  file:'inventory_by_facility.csv' },
+    inv_category: { module:'inventory_by_category',  file:'inventory_by_category.csv' },
+    inv_expiry:   { module:'inventory_expiry_risk',  file:'inventory_expiry_risk.csv' },
+    inv_dead:     { module:'inventory_dead_stock',   file:'inventory_dead_stock.csv' },
+  };
+  const cfg = map[key]; if(!cfg) return;
+  const rows = await fetchData(cfg.module, getInvFilters());
+  if (rows) downloadCsv(jsonToCsv(rows), cfg.file);
+}
+
+document.getElementById('btn-export-inv').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-export-inv');
+  btn.textContent='⏳ Exporting…'; btn.disabled=true;
+  const rows = await fetchData('export_inventory', getInvFilters());
+  if(rows) downloadCsv(jsonToCsv(rows),'inventory_export.csv');
+  btn.textContent='⬇ Export Excel'; btn.disabled=false;
+});
+
+// ══════════════════════════════════════════════════
+// PUTAWAY MODULE
+// ══════════════════════════════════════════════════
+let ptaTypeChart, ptaStatusChart, ptaDailyChart, ptaFacilityChart, ptaClientChart, ptaRejChart;
+
+function initPutawayCharts() {
+  const donutOpts = { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } } };
+  ptaTypeChart   = new Chart(document.getElementById('chartPtaType'),   { type:'doughnut', data:{ labels:[], datasets:[{ data:[], backgroundColor:[], borderWidth:0, cutout:'68%', hoverOffset:6 }] }, options: donutOpts });
+  ptaStatusChart = new Chart(document.getElementById('chartPtaStatus'), { type:'doughnut', data:{ labels:[], datasets:[{ data:[], backgroundColor:[], borderWidth:0, cutout:'68%', hoverOffset:6 }] }, options: donutOpts });
+  ptaRejChart    = new Chart(document.getElementById('chartPtaRejection'), { type:'doughnut', data:{ labels:[], datasets:[{ data:[], backgroundColor:[RED,AMBER,ORANGE,GOLD,BLUE,'#9B6BB5'], borderWidth:0, cutout:'68%', hoverOffset:6 }] }, options: donutOpts });
+
+  ptaDailyChart = new Chart(document.getElementById('chartPtaDaily'), {
+    type:'bar',
+    data:{ labels:[], datasets:[{ label:'Units Putaway', data:[], backgroundColor: ctx => { const v=ctx.raw||0; return v>500?ORANGE_DEEP:v>200?ORANGE:AMBER; }, borderRadius:5 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
+      scales:{ x:{ grid:{ display:false }, ticks:{ maxTicksLimit:14 } }, y:{ grid:{ color:LINE } } } }
+  });
+
+  const hBar = { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label: c => fmtCount(c.raw)+' units' } } },
+    scales:{ x:{ grid:{ color:LINE } }, y:{ grid:{ display:false }, ticks:{ font:{ size:11 } } } }
+  };
+  const palette = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'];
+  ptaFacilityChart = new Chart(document.getElementById('chartPtaFacility'), {
+    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:5, barThickness:20 }] }, options: hBar
+  });
+  ptaClientChart = new Chart(document.getElementById('chartPtaClient'), {
+    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:5, barThickness:20 }] }, options: hBar
+  });
+}
+
+function getPtaFilters() {
+  return { client: document.getElementById('pta-client').value,
+           facility: document.getElementById('pta-facility').value,
+           dateFrom: document.getElementById('pta-from').value,
+           dateTo:   document.getElementById('pta-to').value };
+}
+
+function buildDynLegend(containerId, labels, values, colors) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = labels.map((l,i) => `<div class="dyn-legend-row"><div class="dyn-dot" style="background:${colors[i%colors.length]}"></div><span class="dyn-label">${l}</span><span class="dyn-val">${fmtCount(values[i])}</span></div>`).join('');
+}
+
+async function loadPutaway() {
+  ['load-pta-daily','load-pta-fc','load-pta-client'].forEach(showLoader);
+  ['pta-kpi-batches','pta-kpi-units','pta-kpi-completion','pta-kpi-pending','pta-kpi-rejection'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.textContent = '—';
+  });
+
+  const f = getPtaFilters();
+  const [kpi, byType, byStatus, daily, byFacility, byClient, rejReasons] = await Promise.all([
+    fetchData('putaway_kpi', f),
+    fetchData('putaway_by_type', f),
+    fetchData('putaway_by_status', f),
+    fetchData('putaway_daily_trend', f),
+    fetchData('putaway_by_facility', f),
+    fetchData('putaway_by_client', f),
+    fetchData('putaway_rejection_reasons', f),
+  ]);
+
+  if (kpi) {
+    document.getElementById('pta-kpi-batches').textContent    = fmtCount(kpi.total_batches);
+    document.getElementById('pta-kpi-units').textContent      = fmtCount(kpi.total_units);
+    document.getElementById('pta-kpi-completion').textContent = fmtPct(kpi.completion_rate);
+    document.getElementById('pta-kpi-pending').textContent    = fmtCount(kpi.pending_count);
+    document.getElementById('pta-kpi-rejection').textContent  = fmtPct(kpi.rejection_rate);
+  }
+
+  const typePalette = [ORANGE, AMBER, GOLD, GREEN, BLUE, '#9B6BB5'];
+  if (byType && byType.length) {
+    ptaTypeChart.data.labels = byType.map(r=>r.type||'Unknown');
+    ptaTypeChart.data.datasets[0].data = byType.map(r=>parseInt(r.total_items)||0);
+    ptaTypeChart.data.datasets[0].backgroundColor = byType.map((_,i)=>typePalette[i%typePalette.length]);
+    ptaTypeChart.update();
+    buildDynLegend('pta-type-legend', byType.map(r=>r.type||'Unknown'), byType.map(r=>parseInt(r.total_items)||0), typePalette);
+  }
+
+  const statusColors = { 'COMPLETE':GREEN, 'PENDING':AMBER, 'CREATED':BLUE, 'REJECTED':RED };
+  if (byStatus && byStatus.length) {
+    ptaStatusChart.data.labels = byStatus.map(r=>r.status_code||'Unknown');
+    ptaStatusChart.data.datasets[0].data = byStatus.map(r=>parseInt(r.total_items)||0);
+    ptaStatusChart.data.datasets[0].backgroundColor = byStatus.map(r=>statusColors[r.status_code]||GOLD);
+    ptaStatusChart.update();
+    buildDynLegend('pta-status-legend', byStatus.map(r=>r.status_code||'Unknown'), byStatus.map(r=>parseInt(r.total_items)||0), byStatus.map(r=>statusColors[r.status_code]||GOLD));
+  }
+
+  if (daily && daily.length) {
+    ptaDailyChart.data.labels = daily.map(r=>r.date);
+    ptaDailyChart.data.datasets[0].data = daily.map(r=>parseInt(r.total_qty)||0);
+    ptaDailyChart.update();
+  }
+  hideLoader('load-pta-daily');
+
+  const palette = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'];
+  if (byFacility && byFacility.length) {
+    ptaFacilityChart.data.labels = byFacility.map(r=>r.facility_code);
+    ptaFacilityChart.data.datasets[0].data = byFacility.map(r=>parseInt(r.total_qty)||0);
+    ptaFacilityChart.data.datasets[0].backgroundColor = byFacility.map((_,i)=>palette[i%palette.length]);
+    ptaFacilityChart.update();
+  }
+  hideLoader('load-pta-fc');
+
+  if (byClient && byClient.length) {
+    ptaClientChart.data.labels = byClient.map(r=>r.client_name);
+    ptaClientChart.data.datasets[0].data = byClient.map(r=>parseInt(r.total_qty)||0);
+    ptaClientChart.data.datasets[0].backgroundColor = byClient.map((_,i)=>palette[i%palette.length]);
+    ptaClientChart.update();
+  }
+  hideLoader('load-pta-client');
+
+  if (rejReasons && rejReasons.length) {
+    ptaRejChart.data.labels = rejReasons.map(r=>shortenLabel(r.rejection_reason||'Unknown',22));
+    ptaRejChart.data.datasets[0].data = rejReasons.map(r=>parseInt(r.count)||0);
+    ptaRejChart.update();
+    buildDynLegend('pta-rejection-legend', rejReasons.map(r=>shortenLabel(r.rejection_reason||'Unknown',22)), rejReasons.map(r=>parseInt(r.count)||0), [RED,AMBER,ORANGE,GOLD,BLUE,'#9B6BB5']);
+  }
+}
+
+async function exportPtaViz(key) {
+  const map = {
+    pta_type:      { module:'putaway_by_type',           file:'putaway_type.csv' },
+    pta_status:    { module:'putaway_by_status',         file:'putaway_status.csv' },
+    pta_daily:     { module:'putaway_daily_trend',       file:'putaway_daily.csv' },
+    pta_facility:  { module:'putaway_by_facility',       file:'putaway_by_facility.csv' },
+    pta_client:    { module:'putaway_by_client',         file:'putaway_by_client.csv' },
+    pta_rejection: { module:'putaway_rejection_reasons', file:'putaway_rejections.csv' },
+  };
+  const cfg = map[key]; if(!cfg) return;
+  const rows = await fetchData(cfg.module, getPtaFilters());
+  if (rows) downloadCsv(jsonToCsv(rows), cfg.file);
+}
+
+document.getElementById('btn-export-pta').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-export-pta');
+  btn.textContent='⏳ Exporting…'; btn.disabled=true;
+  const rows = await fetchData('export_putaway', getPtaFilters());
+  if(rows) downloadCsv(jsonToCsv(rows),'putaway_export.csv');
+  btn.textContent='⬇ Export Excel'; btn.disabled=false;
+});
+
+// ══════════════════════════════════════════════════
+// GRN MODULE
+// ══════════════════════════════════════════════════
+let grnTrendChart, grnVendorVolChart, grnVendorRejChart, grnClientChart, grnCatChart, grnRejChart;
+
+function initGRNCharts() {
+  grnTrendChart = new Chart(document.getElementById('chartGRNTrend'), {
+    type:'line',
+    data:{ labels:[], datasets:[
+      { label:'GRN Count', data:[], borderColor:ORANGE, backgroundColor:'rgba(255,106,50,.12)', fill:true, tension:.4, borderWidth:2.5, pointRadius:0, yAxisID:'y' },
+      { label:'Units Received', data:[], borderColor:GREEN, backgroundColor:'rgba(29,154,108,.07)', fill:true, tension:.4, borderWidth:2, pointRadius:0, yAxisID:'y1' }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false },
+      plugins:{ legend:{ position:'top', align:'end', labels:{ usePointStyle:true, boxWidth:7, padding:12 } } },
+      scales:{ x:{ grid:{ display:false }, ticks:{ maxTicksLimit:12 } },
+               y:{ grid:{ color:LINE }, position:'left' },
+               y1:{ grid:{ display:false }, position:'right' } } }
+  });
+
+  const hBar = { indexAxis:'y', responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ display:false } },
+    scales:{ x:{ grid:{ color:LINE } }, y:{ grid:{ display:false }, ticks:{ font:{ size:11 } } } }
+  };
+  const palette = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'];
+
+  grnVendorVolChart = new Chart(document.getElementById('chartGRNVendorVol'), {
+    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:5, barThickness:18 }] },
+    options:{ ...hBar, plugins:{ ...hBar.plugins, tooltip:{ callbacks:{ label: c=>fmtCount(c.raw)+' units' } } } }
+  });
+
+  grnVendorRejChart = new Chart(document.getElementById('chartGRNVendorRej'), {
+    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: c=>{ const v=parseFloat(c.raw); return v>10?RED:v>5?ORANGE:AMBER; }, borderRadius:5, barThickness:18 }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label: c=>fmtPct(c.raw) } } },
+      scales:{ x:{ grid:{ color:LINE }, max:100 }, y:{ grid:{ display:false }, ticks:{ font:{ size:11 } } } } }
+  });
+
+  grnClientChart = new Chart(document.getElementById('chartGRNClient'), {
+    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:5, barThickness:22 }] },
+    options:{ ...hBar, plugins:{ ...hBar.plugins, tooltip:{ callbacks:{ label: c=>fmtCount(c.raw)+' units' } } } }
+  });
+
+  grnCatChart = new Chart(document.getElementById('chartGRNCategory'), {
+    type:'bar',
+    data:{ labels:[], datasets:[{ data:[], backgroundColor: c=>palette[c.dataIndex%palette.length], borderRadius:5, barThickness:22 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
+      scales:{ x:{ grid:{ display:false }, ticks:{ maxRotation:0, font:{ size:10.5 } } }, y:{ grid:{ color:LINE } } } }
+  });
+
+  grnRejChart = new Chart(document.getElementById('chartGRNRejection'), {
+    type:'doughnut',
+    data:{ labels:[], datasets:[{ data:[], backgroundColor:[RED,AMBER,ORANGE,GOLD,BLUE,'#9B6BB5'], borderWidth:0, cutout:'68%', hoverOffset:6 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } } }
+  });
+}
+
+function getGRNFilters() {
+  return { client: document.getElementById('grn-client').value,
+           facility: document.getElementById('grn-facility').value,
+           dateFrom: document.getElementById('grn-from').value,
+           dateTo:   document.getElementById('grn-to').value };
+}
+
+async function loadGRN() {
+  ['load-grn-trend','load-grn-vendor','load-grn-vendor-rej','load-grn-client','load-grn-cat'].forEach(showLoader);
+  ['grn-kpi-total','grn-kpi-units','grn-kpi-value','grn-kpi-rejection','grn-kpi-lead'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.textContent='—';
+  });
+  ['grn-exp-30','grn-exp-60','grn-exp-90'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.innerHTML='<span style="color:var(--ink-soft);font-size:12px;">Loading…</span>';
+  });
+
+  const f = getGRNFilters();
+  const [kpi, trend, byVendorVol, byVendorRej, byClient, byCat, rejReasons, expiry] = await Promise.all([
+    fetchData('grn_kpi', f),
+    fetchData('grn_trend', f),
+    fetchData('grn_by_vendor', f),
+    fetchData('grn_vendor_rejection', f),
+    fetchData('grn_by_client', f),
+    fetchData('grn_by_category', f),
+    fetchData('grn_rejection_reasons', f),
+    fetchData('grn_expiry_risk', f),
+  ]);
+
+  if (kpi) {
+    document.getElementById('grn-kpi-total').textContent     = fmtCount(kpi.total_grns);
+    document.getElementById('grn-kpi-units').textContent     = fmtCount(kpi.total_units_received);
+    document.getElementById('grn-kpi-value').textContent     = fmtRev(kpi.total_value_received);
+    document.getElementById('grn-kpi-rejection').textContent = fmtPct(kpi.overall_rejection_rate);
+    document.getElementById('grn-kpi-lead').textContent      = (parseFloat(kpi.avg_po_to_grn_days)||0).toFixed(1)+' days';
+    const fmt = d => { const p=d.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; };
+    document.getElementById('grn-date-chip').textContent = '📅 '+fmt(f.dateFrom||'--')+' – '+fmt(f.dateTo||'--');
+  }
+
+  if (trend && trend.length) {
+    grnTrendChart.data.labels = trend.map(r=>r.date);
+    grnTrendChart.data.datasets[0].data = trend.map(r=>parseInt(r.grn_count)||0);
+    grnTrendChart.data.datasets[1].data = trend.map(r=>parseInt(r.units_received)||0);
+    grnTrendChart.update();
+  }
+  hideLoader('load-grn-trend');
+
+  const palette = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'];
+  if (byVendorVol && byVendorVol.length) {
+    grnVendorVolChart.data.labels = byVendorVol.map(r=>shortenLabel(r.vendor_name||r.vendor_code,24));
+    grnVendorVolChart.data.datasets[0].data = byVendorVol.map(r=>parseInt(r.units_received)||0);
+    grnVendorVolChart.data.datasets[0].backgroundColor = byVendorVol.map((_,i)=>palette[i%palette.length]);
+    grnVendorVolChart.update();
+  }
+  hideLoader('load-grn-vendor');
+
+  if (byVendorRej && byVendorRej.length) {
+    grnVendorRejChart.data.labels = byVendorRej.map(r=>shortenLabel(r.vendor_name||r.vendor_code,24));
+    grnVendorRejChart.data.datasets[0].data = byVendorRej.map(r=>parseFloat(r.rejection_rate)||0);
+    grnVendorRejChart.update();
+  }
+  hideLoader('load-grn-vendor-rej');
+
+  if (byClient && byClient.length) {
+    grnClientChart.data.labels = byClient.map(r=>r.client_name);
+    grnClientChart.data.datasets[0].data = byClient.map(r=>parseInt(r.units_received)||0);
+    grnClientChart.data.datasets[0].backgroundColor = byClient.map((_,i)=>palette[i%palette.length]);
+    grnClientChart.update();
+  }
+  hideLoader('load-grn-client');
+
+  if (byCat && byCat.length) {
+    grnCatChart.data.labels = byCat.map(r=>shortenLabel(r.category_name||r.category,16));
+    grnCatChart.data.datasets[0].data = byCat.map(r=>parseInt(r.units_received)||0);
+    grnCatChart.update();
+  }
+  hideLoader('load-grn-cat');
+
+  if (rejReasons && rejReasons.length) {
+    grnRejChart.data.labels = rejReasons.map(r=>shortenLabel(r.rejection_reason||'Unknown',22));
+    grnRejChart.data.datasets[0].data = rejReasons.map(r=>parseInt(r.count)||0);
+    grnRejChart.update();
+    buildDynLegend('grn-rejection-legend', rejReasons.map(r=>shortenLabel(r.rejection_reason||'Unknown',22)), rejReasons.map(r=>parseInt(r.count)||0), [RED,AMBER,ORANGE,GOLD,BLUE,'#9B6BB5']);
+  }
+
+  // Expiry risk slabs — based on (expiry_date - grn_date) days remaining
+  ['30','60','90'].forEach(slab => {
+    const el = document.getElementById('grn-exp-'+slab);
+    const items = (expiry||[]).filter(r => {
+      const d = parseInt(r.days_shelf_life)||0;
+      if (slab==='30') return d>=0 && d<30;
+      if (slab==='60') return d>=30 && d<60;
+      return d>=60 && d<90;
+    });
+    if (!items.length) { el.innerHTML='<span class="slab-empty">✓ Clear</span>'; return; }
+    el.innerHTML='<div class="slab-items">'+items.slice(0,10).map(r=>`<div class="slab-item">${shortenLabel(r.item_sku_code,18)} · ${r.facility_code} · ${parseInt(r.days_shelf_life)}d</div>`).join('')+(items.length>10?`<div class="slab-item">+${items.length-10} more</div>`:'')+' </div>';
+  });
+}
+
+async function exportGRNViz(key) {
+  const map = {
+    grn_trend:      { module:'grn_trend',              file:'grn_trend.csv' },
+    grn_vendor_vol: { module:'grn_by_vendor',          file:'grn_by_vendor.csv' },
+    grn_vendor_rej: { module:'grn_vendor_rejection',   file:'grn_vendor_rejection.csv' },
+    grn_client:     { module:'grn_by_client',          file:'grn_by_client.csv' },
+    grn_category:   { module:'grn_by_category',        file:'grn_by_category.csv' },
+    grn_rejection:  { module:'grn_rejection_reasons',  file:'grn_rejection_reasons.csv' },
+    grn_expiry:     { module:'grn_expiry_risk',        file:'grn_expiry_risk.csv' },
+  };
+  const cfg = map[key]; if(!cfg) return;
+  const rows = await fetchData(cfg.module, getGRNFilters());
+  if (rows) downloadCsv(jsonToCsv(rows), cfg.file);
+}
+
+document.getElementById('btn-export-grn').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-export-grn');
+  btn.textContent='⏳ Exporting…'; btn.disabled=true;
+  const rows = await fetchData('export_grn', getGRNFilters());
+  if(rows) downloadCsv(jsonToCsv(rows),'grn_export.csv');
+  btn.textContent='⬇ Export Excel'; btn.disabled=false;
+});
+
 // ---- INIT ----
 window.addEventListener('load',async()=>{
   initCharts();
+  initInventoryCharts();
+  initPutawayCharts();
+  initGRNCharts();
   await loadFilterOptions();
   await loadSaleOrders();
+  // Set today as default snapshot for inventory
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('inv-snapshot').value = today;
 });
 </script>
 </body>
