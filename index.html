@@ -23,6 +23,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);displa
 body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 50% at 70% 20%,rgba(255,106,50,.055) 0%,transparent 70%),radial-gradient(ellipse 50% 40% at 20% 80%,rgba(201,168,66,.04) 0%,transparent 60%);pointer-events:none;z-index:0;}
 ::selection{background:var(--peach);}
 @keyframes shimmer{0%{background-position:200% center}100%{background-position:-200% center}}
+@keyframes kpi-sweep{0%{background-position:150% 150%}50%{background-position:-50% -50%}100%{background-position:150% 150%}}
 @keyframes pulse-dot{0%,100%{box-shadow:0 0 0 0 rgba(29,154,108,.5)}50%{box-shadow:0 0 0 5px rgba(29,154,108,0)}}
 @keyframes fadein{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -87,7 +88,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .btn-export:hover{transform:translateY(-2px);}
 
 /* FILTER BAR — inline label style */
-.filter-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 18px;margin-bottom:22px;box-shadow:var(--shadow);}
+.filter-bar{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 16px;margin-bottom:22px;box-shadow:var(--shadow);scrollbar-width:none;}
+.filter-bar::-webkit-scrollbar{display:none;}
 .filter-bar select,.filter-bar input[type=date]{height:36px;padding:0 10px;border:1.5px solid var(--line);border-radius:9px;font-size:12.5px;font-family:'Inter',sans-serif;font-weight:600;color:var(--ink);background:#fff;outline:none;transition:border-color .15s,box-shadow .15s;cursor:pointer;appearance:auto;}
 .filter-bar select:focus,.filter-bar input[type=date]:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(255,106,50,.1);}
 .filter-bar select:hover{border-color:var(--orange);}
@@ -101,12 +103,12 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .kpi-row-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;}
 .kpi-card{background:var(--panel);border:1px solid rgba(234,228,219,.8);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-card);position:relative;overflow:hidden;transition:transform .18s ease,box-shadow .18s ease;}
 .kpi-card:hover{transform:translateY(-3px);box-shadow:0 4px 8px rgba(28,26,23,.06),0 20px 40px -14px rgba(255,106,50,.22);}
-.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--orange),var(--gold),#fff,var(--orange-deep),var(--amber),var(--gold));background-size:300% 100%;animation:shimmer 5s ease infinite;}
+.kpi-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent 0%,transparent 35%,rgba(255,255,255,.15) 50%,transparent 65%,transparent 100%);background-size:300% 300%;animation:kpi-sweep 4s ease-in-out infinite;border-radius:inherit;pointer-events:none;z-index:1;}
 .kpi-card::after{content:'';position:absolute;width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.7) 0%,transparent 70%);top:-25px;right:-15px;pointer-events:none;}
 .kpi-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
 .kpi-label{font-size:11px;color:var(--ink-soft);font-weight:700;letter-spacing:.2px;}
 .kpi-icon{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--peach-soft),var(--peach));display:flex;align-items:center;justify-content:center;font-size:14px;}
-.kpi-value{font-family:'Sora',sans-serif;font-size:21px;font-weight:800;letter-spacing:-.5px;margin-bottom:5px;background:linear-gradient(135deg,var(--ink) 30%,var(--orange-deep) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.kpi-value{position:relative;z-index:2;font-family:'Sora',sans-serif;font-size:21px;font-weight:800;letter-spacing:-.5px;margin-bottom:5px;background:linear-gradient(135deg,var(--ink) 30%,var(--orange-deep) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
 .kpi-delta{font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px;}
 .kpi-delta.up{color:var(--green);}.kpi-delta.down{color:var(--red);}.kpi-delta.neutral{color:var(--ink-soft);}
 .kpi-delta span.base{color:var(--ink-soft);font-weight:500;}
@@ -228,13 +230,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <div class="filter-bar">
     <select id="f-client" title="Client"><option value="All">All Clients</option></select>
     <div class="filter-divider"></div>
-    <select id="f-facility" title="FC"><option value="All">All FCs</option></select>
+    <select id="f-facility" title="City"><option value="All">All Cities</option></select>
     <div class="filter-divider"></div>
-    <select id="f-marketplace" title="Marketplace">
-      <option value="All">All Marketplaces</option>
-      <option>Flipkart</option><option>Amazon</option><option>Meesho</option>
-      <option>CRED</option><option>D2C</option><option>Other</option>
-    </select>
+    <select id="f-marketplace" title="Marketplace"><option value="All">All Marketplaces</option></select>
     <div class="filter-divider"></div>
     <select id="f-type" title="Order Type">
       <option value="All">All Types</option>
@@ -271,7 +269,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
           <div class="panel-sub">Select metric — click multi-select to compare</div>
         </div>
         <div class="panel-head-right">
-          <select class="mini-select" id="trend-fc"><option value="All">All FCs</option></select>
+          <select class="mini-select" id="trend-fc"><option value="All">All Cities</option></select>
           <select class="mini-select" id="trend-client"><option value="All">All Clients</option></select>
           <select class="mini-select" id="trend-mkt">
             <option value="All">All Marketplaces</option>
@@ -346,7 +344,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <div class="panel-head">
           <div class="panel-head-left"><div class="panel-title">COD vs Prepaid</div><div class="panel-sub">Payment mode split</div></div>
           <div class="panel-head-right">
-            <select class="mini-select" id="cod-fc"><option value="All">All FCs</option></select>
+            <select class="mini-select" id="cod-fc"><option value="All">All Cities</option></select>
             <select class="mini-select" id="cod-client"><option value="All">All Clients</option></select>
           </div>
         </div>
@@ -361,7 +359,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <div class="panel-head">
           <div class="panel-head-left"><div class="panel-title">Single vs Combo Shipments</div><div class="panel-sub">By tracking number SKU count</div></div>
           <div class="panel-head-right">
-            <select class="mini-select" id="stype-fc"><option value="All">All FCs</option></select>
+            <select class="mini-select" id="stype-fc"><option value="All">All Cities</option></select>
             <select class="mini-select" id="stype-client"><option value="All">All Clients</option></select>
           </div>
         </div>
@@ -379,9 +377,18 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Fulfilment TAT Adherence</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
     <div class="grid grid-2b">
       <div class="panel" style="position:relative;">
-        <div class="panel-head"><div class="panel-head-left"><div class="panel-title" style="display:flex;align-items:center;gap:8px;">Within TAT vs Post-TAT by Client <button class="btn-viz-export" onclick="exportViz('tat')">⬇ Export</button></div><div class="panel-sub">Orders before vs after fulfillment_tat</div></div><span class="tag">TAT</span></div>
-        <div class="chart-box" style="height:280px;"><canvas id="chartTATAdherence"></canvas></div>
-        <div class="loading-overlay" id="load-tat"><div class="spinner"></div></div>
+        <div class="panel-head">
+          <div class="panel-head-left">
+            <div class="panel-title">Fulfilment TAT Distribution</div>
+            <div class="panel-sub">Order-to-dispatch time buckets</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <button class="btn-viz-export" onclick="exportViz('tat_dist')">⬇ Export</button>
+            <span class="tag">TAT</span>
+          </div>
+        </div>
+        <div class="chart-box" style="height:280px;"><canvas id="chartTATAdherenceViz"></canvas></div>
+        <div class="loading-overlay" id="load-tat-viz"><div class="spinner"></div></div>
       </div>
       <div class="panel" style="position:relative;">
         <div class="panel-head"><div class="panel-title">TAT Summary by Client</div></div>
@@ -872,7 +879,9 @@ function shortenLabel(s,max){ return s&&s.length>max?s.slice(0,max)+'…':s; }
 // ---- FILTERS ----
 function getFilters(){
   return { dateFrom:document.getElementById('f-from').value, dateTo:document.getElementById('f-to').value,
-    client:document.getElementById('f-client').value, facility:document.getElementById('f-facility').value,
+    client:document.getElementById('f-client').value,
+    city:document.getElementById('f-facility').value,          // city filter (facility_city)
+    marketplace:document.getElementById('f-marketplace').value, // marketplace_group filter
     orderType:document.getElementById('f-type').value };
 }
 
@@ -881,6 +890,30 @@ function getFilters(){
   document.getElementById(id)?.addEventListener('change', loadSaleOrders);
 });
 document.getElementById('btn-apply-so').addEventListener('click', loadSaleOrders);
+
+// ── Trend mini-slicer: reloads ONLY the master trend chart ──
+async function loadTrend(){
+  showLoader('load-trend');
+  const base = getFilters();
+  const extra = {
+    client:    document.getElementById('trend-client')?.value || 'All',
+    city:      document.getElementById('trend-fc')?.value     || 'All',
+    marketplace: document.getElementById('trend-mkt')?.value  || 'All',
+  };
+  // merge: mini-slicer overrides main filter for trend only
+  const merged = {...base, ...extra};
+  const trend = await fetchData('sale_orders_trend', merged);
+  if(trend && trend.length){
+    masterChart.data.labels=trend.map(r=>r.date);
+    const ds=buildMasterDatasets(trend);
+    ds.forEach((d,i)=>{ masterChart.data.datasets[i]=d; });
+    masterChart.update();
+  }
+  hideLoader('load-trend');
+}
+['trend-fc','trend-client','trend-mkt'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('change', loadTrend);
+});
 
 // ---- API ----
 // fetchData: pass rawParams=true to skip SO filter merge (for GRN/Putaway/Inv)
@@ -1012,7 +1045,7 @@ function initCharts(){
       responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmtCount(c.raw)+' shipments'}}},
       scales:{
-        x:{grid:{display:false},ticks:{maxRotation:0,font:{size:11}}}, // horizontal labels
+        x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0,font:{size:10.5},callback:function(val,i){const lbl=this.getLabelForValue(val);if(!lbl)return'';const w=lbl.split(' ');return w.length>1?[w.slice(0,Math.ceil(w.length/2)).join(' '),w.slice(Math.ceil(w.length/2)).join(' ')]:lbl;}}}
         y:{grid:{color:LINE},ticks:{callback:v=>v>=1000?(v/1000)+'k':v}}
       }
     }
@@ -1034,7 +1067,7 @@ function initCharts(){
     },borderRadius:6,barThickness:22}]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'₹'+parseFloat(c.raw).toFixed(2)+'L'}}},
-      scales:{x:{grid:{display:false},ticks:{maxRotation:0,font:{size:10.5}}},y:{grid:{color:LINE}}}}
+      scales:{x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0,font:{size:10.5},callback:function(val,i){const lbl=this.getLabelForValue(val);if(!lbl)return'';const w=lbl.split(' ');return w.length>1?[w.slice(0,Math.ceil(w.length/2)).join(' '),w.slice(Math.ceil(w.length/2)).join(' ')]:lbl;}}},y:{grid:{color:LINE}}}}
   });
 
   tatChart=new Chart(document.getElementById('chartTATAdherence'),{
@@ -1055,6 +1088,15 @@ function initCharts(){
       scales:{x:{grid:{display:false}},y:{grid:{color:LINE}}}}
   });
 
+  // TAT Distribution chart in Viz tab (mirrors analytics tab chart)
+  window.tatAdherenceVizChart=new Chart(document.getElementById('chartTATAdherenceViz'),{
+    type:'bar',
+    data:{labels:['0-6h','6-12h','12-18h','18-24h','24-36h','36h+'],datasets:[{data:[0,0,0,0,0,0],backgroundColor:[GREEN,AMBER,ORANGE,ORANGE_DEEP,RED,'#8B0000'],borderRadius:6,barThickness:36}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmtCount(c.raw)+' orders'}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:12}}},y:{grid:{color:LINE},ticks:{callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}}}
+  });
+
   courierSlaChart=new Chart(document.getElementById('chartCourierSla'),{
     type:'bar',
     data:{labels:[],datasets:[{data:[],backgroundColor:c=>{const v=parseFloat(c.raw);return v>=95?GREEN:v>=90?ORANGE:v>=85?AMBER:RED;},borderRadius:6,barThickness:22}]},
@@ -1067,11 +1109,13 @@ function initCharts(){
 async function loadFilterOptions(){
   const rows=await fetchData('filter_options');
   if(!rows) return;
-  const clientSel=document.getElementById('f-client');
-  const facilSel=document.getElementById('f-facility');
-  // populate mini selects too
-  const miniClients=['cod-client','stype-client','trend-client'];
-  const miniFacs=['cod-fc','stype-fc','trend-fc'];
+  const clientSel  = document.getElementById('f-client');
+  const citySel    = document.getElementById('f-facility');   // now = city
+  const mktSel     = document.getElementById('f-marketplace'); // now = marketplace_group
+  const miniClients= ['cod-client','stype-client','trend-client'];
+  const miniMkts   = ['trend-mkt'];
+
+  // Clients
   const clients=[...new Set(rows.map(r=>r.client_name).filter(Boolean))].sort();
   clients.forEach(c=>{
     [clientSel,...miniClients.map(id=>document.getElementById(id))].forEach(sel=>{
@@ -1079,24 +1123,35 @@ async function loadFilterOptions(){
       const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o);
     });
   });
-  const allFacilities=rows.map(r=>({f:r.facility_code,c:r.client_name})).filter(r=>r.f);
-  function populateFacs(sel, filtered){
+
+  // Cities (from facility_city column) — filtered by client
+  const allCities=rows.map(r=>({city:r.facility_city,client:r.client_name})).filter(r=>r.city);
+  function populateCities(sel, filtered){
     while(sel.options.length>1) sel.remove(1);
-    filtered.forEach(r=>{ const o=document.createElement('option'); o.value=r.f; o.textContent=r.f; sel.appendChild(o); });
+    const unique=[...new Set(filtered.map(r=>r.city))].sort();
+    unique.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
   }
   clientSel.addEventListener('change',()=>{
     const sel=clientSel.value;
-    const facs=sel==='All'?allFacilities:allFacilities.filter(r=>r.c===sel);
-    [facilSel,...miniFacs.map(id=>document.getElementById(id))].forEach(s=>s&&populateFacs(s,facs));
+    const cities=sel==='All'?allCities:allCities.filter(r=>r.client===sel);
+    populateCities(citySel, cities);
   });
-  populateFacs(facilSel, allFacilities);
-  [...miniFacs.map(id=>document.getElementById(id))].forEach(s=>s&&populateFacs(s,allFacilities));
+  populateCities(citySel, allCities);
+
+  // Marketplace groups (from marketplace_group column)
+  const mkts=[...new Set(rows.map(r=>r.marketplace_group).filter(Boolean))].sort();
+  mkts.forEach(m=>{
+    [mktSel,...miniMkts.map(id=>document.getElementById(id))].forEach(sel=>{
+      if(!sel) return;
+      const o=document.createElement('option'); o.value=m; o.textContent=m; sel.appendChild(o);
+    });
+  });
 }
 
 // ---- MAIN LOAD FUNCTION ----
 async function loadSaleOrders(){
   ['load-trend','load-cod','load-shiptype','load-client','load-courier',
-   'load-sku','load-cat','load-tat','load-tat-tbl','load-tatdist','load-couriersla'].forEach(showLoader);
+   'load-sku','load-cat','load-tat','load-tat-tbl','load-tatdist','load-couriersla','load-tat-viz'].forEach(showLoader);
   ['kpi-total-orders','kpi-total-units','kpi-revenue','kpi-shipments','kpi-fulfillment','kpi-cancellation',
    'kpi-aov','kpi-discount','kpi-tax'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent='—'; });
 
@@ -1157,8 +1212,9 @@ async function loadSaleOrders(){
   hideLoader('load-shiptype');
 
   if(byClient && byClient.length){
-    clientChart.data.labels=byClient.map(r=>r.client_name);
-    clientChart.data.datasets[0].data=byClient.map(r=>parseInt(r.order_count)||0);
+    const nonZeroClients=byClient.filter(r=>(parseInt(r.order_count)||0)>0);
+    clientChart.data.labels=nonZeroClients.map(r=>r.client_name);
+    clientChart.data.datasets[0].data=nonZeroClients.map(r=>parseInt(r.order_count)||0);
     const clientColors=['#FF6A32','#E8823C','#FFB238','#C9A842','#6BAE72','#3E7CB1','#9B6BB5','#DD4B39','#4ECDC4','#F7B731'];
     clientChart.data.datasets[0].backgroundColor=byClient.map((_,i)=>clientColors[i%clientColors.length]);
     clientChart.update();
@@ -1209,9 +1265,18 @@ async function loadSaleOrders(){
   hideLoader('load-tat'); hideLoader('load-tat-tbl');
 
   if(tatDist && tatDist.length){
-    tatDistChart.data.labels=tatDist.map(r=>r.bucket);
-    tatDistChart.data.datasets[0].data=tatDist.map(r=>parseInt(r.orders)||0);
+    const distLabels=tatDist.map(r=>r.bucket);
+    const distVals=tatDist.map(r=>parseInt(r.orders)||0);
+    tatDistChart.data.labels=distLabels;
+    tatDistChart.data.datasets[0].data=distVals;
     tatDistChart.update();
+    // Mirror to viz tab TAT distribution panel
+    if(window.tatAdherenceVizChart){
+      window.tatAdherenceVizChart.data.labels=distLabels;
+      window.tatAdherenceVizChart.data.datasets[0].data=distVals;
+      window.tatAdherenceVizChart.update();
+    }
+    hideLoader('load-tat-viz');
   }
   hideLoader('load-tatdist');
 
