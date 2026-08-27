@@ -844,6 +844,11 @@ document.querySelectorAll('.nav-item').forEach(item=>{
     item.classList.add('active');
     document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
     document.getElementById('page-'+item.dataset.page).classList.add('active');
+    // Auto-load module data on first visit to each page
+    const page = item.dataset.page;
+    if (page === 'grn'       && !grnLoaded)       { grnLoaded = true;       loadGRN(); }
+    if (page === 'putaway'   && !putawayLoaded)   { putawayLoaded = true;   loadPutaway(); }
+    if (page === 'inventory' && !inventoryLoaded) { inventoryLoaded = true; loadInventory(); }
   });
 });
 document.querySelectorAll('.pill-toggle').forEach(group=>{
@@ -878,11 +883,18 @@ function getFilters(){
 document.getElementById('btn-apply-so').addEventListener('click', loadSaleOrders);
 
 // ---- API ----
-async function fetchData(module, extra={}){
-  const params=new URLSearchParams({module,...getFilters(),...extra});
+// fetchData: pass rawParams=true to skip SO filter merge (for GRN/Putaway/Inv)
+async function fetchData(module, extra={}, rawParams=false){
+  const base = rawParams ? {} : getFilters();
+  const params=new URLSearchParams({module,...base,...extra});
   try{
     const res=await fetch(`${WEBAPP_URL}?${params}`);
-    const json=await res.json();
+    const text=await res.text();
+    if(text.trim().startsWith('<')){
+      console.error(`[${module}] returned HTML — check webapp deployment`);
+      return null;
+    }
+    const json=JSON.parse(text);
     if(!json.ok) throw new Error(json.error);
     return json.data;
   }catch(err){
@@ -896,6 +908,9 @@ function showLoader(id){ const el=document.getElementById(id); if(el) el.style.d
 // ---- CHART INSTANCES ----
 let masterChart,codChart,stypeChart,clientChart,courierChart,skuChart,catChart,
     tatChart,tatDistChart,courierSlaChart;
+
+// Lazy-load flags — each module loads once on first nav visit
+let grnLoaded = false, putawayLoaded = false, inventoryLoaded = false;
 
 // ---- MASTER TREND: single-select + multi-select toggle ----
 const METRIC_CONFIGS = [
@@ -1315,14 +1330,14 @@ async function loadInventory() {
   if (f.snapshotDate) params.snapshotDate = f.snapshotDate;
 
   const [kpi, byType, trend, byClient, byFacility, byCat, expiry, dead] = await Promise.all([
-    fetchData('inventory_kpi', params),
-    fetchData('inventory_by_type', params),
-    fetchData('inventory_trend', params),
-    fetchData('inventory_by_client', params),
-    fetchData('inventory_by_facility', params),
-    fetchData('inventory_by_category', params),
-    fetchData('inventory_expiry_risk', params),
-    fetchData('inventory_dead_stock', params),
+    fetchData('inventory_kpi', params, true),
+    fetchData('inventory_by_type', params, true),
+    fetchData('inventory_trend', params, true),
+    fetchData('inventory_by_client', params, true),
+    fetchData('inventory_by_facility', params, true),
+    fetchData('inventory_by_category', params, true),
+    fetchData('inventory_expiry_risk', params, true),
+    fetchData('inventory_dead_stock', params, true),
   ]);
 
   if (kpi) {
@@ -1478,13 +1493,13 @@ async function loadPutaway() {
 
   const f = getPtaFilters();
   const [kpi, byType, byStatus, daily, byFacility, byClient, rejReasons] = await Promise.all([
-    fetchData('putaway_kpi', f),
-    fetchData('putaway_by_type', f),
-    fetchData('putaway_by_status', f),
-    fetchData('putaway_daily_trend', f),
-    fetchData('putaway_by_facility', f),
-    fetchData('putaway_by_client', f),
-    fetchData('putaway_rejection_reasons', f),
+    fetchData('putaway_kpi', f, true),
+    fetchData('putaway_by_type', f, true),
+    fetchData('putaway_by_status', f, true),
+    fetchData('putaway_daily_trend', f, true),
+    fetchData('putaway_by_facility', f, true),
+    fetchData('putaway_by_client', f, true),
+    fetchData('putaway_rejection_reasons', f, true),
   ]);
 
   if (kpi) {
@@ -1641,14 +1656,14 @@ async function loadGRN() {
 
   const f = getGRNFilters();
   const [kpi, trend, byVendorVol, byVendorRej, byClient, byCat, rejReasons, expiry] = await Promise.all([
-    fetchData('grn_kpi', f),
-    fetchData('grn_trend', f),
-    fetchData('grn_by_vendor', f),
-    fetchData('grn_vendor_rejection', f),
-    fetchData('grn_by_client', f),
-    fetchData('grn_by_category', f),
-    fetchData('grn_rejection_reasons', f),
-    fetchData('grn_expiry_risk', f),
+    fetchData('grn_kpi', f, true),
+    fetchData('grn_trend', f, true),
+    fetchData('grn_by_vendor', f, true),
+    fetchData('grn_vendor_rejection', f, true),
+    fetchData('grn_by_client', f, true),
+    fetchData('grn_by_category', f, true),
+    fetchData('grn_rejection_reasons', f, true),
+    fetchData('grn_expiry_risk', f, true),
   ]);
 
   if (kpi) {
