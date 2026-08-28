@@ -1457,7 +1457,7 @@ async function loadInventory() {
   });
 
   const f = getInvFilters();
-  const params = { client: f.client, facility: f.facility };
+  const params = { client: f.client, city: f.city };
   if (f.snapshotDate) params.snapshotDate = f.snapshotDate;
 
   // MTD range for trend
