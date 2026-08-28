@@ -1147,7 +1147,7 @@ function initCharts(){
   // TAT Distribution chart in Viz tab (mirrors analytics tab chart)
   // Wrapped in null check — if canvas doesn't exist, skip gracefully
   // without crashing initCharts() and blocking subsequent chart inits.
-  try { const _vizTatEl = document.getElementById('chartTATAdherenceViz');
+  const _vizTatEl = document.getElementById('chartTATAdherenceViz');
   if (_vizTatEl) {
     window.tatAdherenceVizChart=new Chart(_vizTatEl,{
       type:'bar',
@@ -1954,4 +1954,4 @@ window.addEventListener('load',async()=>{
 </script>
 </body>
 </html>
-  } catch(e){ console.warn('initCharts error:', e.message); }
+  
