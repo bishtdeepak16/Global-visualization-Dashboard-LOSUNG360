@@ -956,10 +956,34 @@ async function loadTrend(){
 });
 
 // ---- API ----
+// ── Data cache for instant slicer response ────────────────────────
+// Caches responses by module+params so repeat slicer combinations
+// are instant (no server call). Cache auto-expires after 10 minutes.
+window._dataCache = window._dataCache || {};
+function _cacheKey(module, params) {
+  return module + '|' + JSON.stringify(params, Object.keys(params).sort());
+}
+function _cacheGet(module, params) {
+  const k = _cacheKey(module, params);
+  const entry = window._dataCache[k];
+  if (!entry) return undefined;
+  if (Date.now() - entry.ts > 10 * 60 * 1000) { delete window._dataCache[k]; return undefined; }
+  return entry.data;
+}
+function _cacheSet(module, params, data) {
+  window._dataCache[_cacheKey(module, params)] = { data, ts: Date.now() };
+}
+
 // fetchData: pass rawParams=true to skip SO filter merge (for GRN/Putaway/Inv)
 async function fetchData(module, extra={}, rawParams=false){
   const base = rawParams ? {} : getFilters();
-  const params=new URLSearchParams({module,...base,...extra});
+  const mergedParams = {...base,...extra};
+
+  // Check cache first — return instantly if available
+  const cached = _cacheGet(module, mergedParams);
+  if (cached !== undefined) return cached;
+
+  const params=new URLSearchParams({module,...mergedParams});
   try{
     const res=await fetch(`${WEBAPP_URL}?${params}`);
     const text=await res.text();
@@ -969,6 +993,7 @@ async function fetchData(module, extra={}, rawParams=false){
     }
     const json=JSON.parse(text);
     if(!json.ok) throw new Error(json.error);
+    _cacheSet(module, mergedParams, json.data); // cache for instant repeat
     return json.data;
   }catch(err){
     console.error(`[${module}]`,err.message);
@@ -1289,9 +1314,10 @@ async function loadSaleOrders(){
 
   if(byCourier && byCourier.length){
     const courierPalette=['#FF6A32','#FFB238','#C9A842','#1D9A6C','#3E7CB1','#9B6BB5','#DD4B39','#4ECDC4','#F7B731','#20B2AA','#FF69B4','#8B4513'];
-    courierChart.data.labels=byCourier.map(r=>r.courier||'Unknown');
-    courierChart.data.datasets[0].data=byCourier.map(r=>parseInt(r.shipments)||0);
-    courierChart.data.datasets[0].backgroundColor=byCourier.map((_,i)=>courierPalette[i%courierPalette.length]);
+    const top10Courier=byCourier.slice(0,10);
+    courierChart.data.labels=top10Courier.map(r=>r.courier||'Unknown');
+    courierChart.data.datasets[0].data=top10Courier.map(r=>parseInt(r.shipments)||0);
+    courierChart.data.datasets[0].backgroundColor=top10Courier.map((_,i)=>courierPalette[i%courierPalette.length]);
     courierChart.update();
   }
   hideLoader('load-courier');
@@ -1304,8 +1330,9 @@ async function loadSaleOrders(){
   hideLoader('load-sku');
 
   if(byCat && byCat.length){
-    catChart.data.labels=byCat.map(r=>shortenLabel(r.category,18));
-    catChart.data.datasets[0].data=byCat.map(r=>(parseFloat(r.revenue)||0)/100000);
+    const top10Cat=byCat.slice(0,10);
+    catChart.data.labels=top10Cat.map(r=>shortenLabel(r.category,18));
+    catChart.data.datasets[0].data=top10Cat.map(r=>(parseFloat(r.revenue)||0)/100000);
     catChart.update();
   }
   hideLoader('load-cat');
@@ -1328,7 +1355,7 @@ async function loadSaleOrders(){
       tbody.appendChild(row);
     });
   }
-  hideLoader('load-tat'); hideLoader('load-tat-tbl');
+  hideLoader('load-tat-tbl'); // always hide
 
   if(tatDist && tatDist.length){
     const distLabels=tatDist.map(r=>r.bucket);
@@ -1511,16 +1538,18 @@ async function loadInventory() {
 
   const palette = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'];
   if (byClient && byClient.length) {
-    invClientChart.data.labels = byClient.map(r=>r.client_name);
-    invClientChart.data.datasets[0].data = byClient.map(r=>parseFloat(r.good_qty)||0);
+    const validInvClients=byClient.filter(r=>r.client_name&&r.client_name.trim()!=='');
+    invClientChart.data.labels = validInvClients.map(r=>r.client_name);
+    invClientChart.data.datasets[0].data = validInvClients.map(r=>parseFloat(r.good_qty)||0);
     invClientChart.data.datasets[0].backgroundColor = byClient.map((_,i)=>palette[i%palette.length]);
     invClientChart.update();
   }
   hideLoader('load-inv-client');
 
   if (byFacility && byFacility.length) {
-    invFacilityChart.data.labels = byFacility.map(r=>r.facility_code);
-    invFacilityChart.data.datasets[0].data = byFacility.map(r=>parseFloat(r.good_qty)||0);
+    const top10InvFac=byFacility.filter(r=>r.facility_code&&r.facility_code.trim()!=='').slice(0,10);
+    invFacilityChart.data.labels = top10InvFac.map(r=>r.facility_code);
+    invFacilityChart.data.datasets[0].data = top10InvFac.map(r=>parseFloat(r.good_qty)||0);
     invFacilityChart.data.datasets[0].backgroundColor = byFacility.map((_,i)=>palette[i%palette.length]);
     invFacilityChart.update();
   }
