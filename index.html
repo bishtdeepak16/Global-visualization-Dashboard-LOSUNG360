@@ -230,7 +230,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <div class="filter-bar">
     <select id="f-client" title="Client"><option value="All">All Clients</option></select>
     <div class="filter-divider"></div>
-    <select id="f-facility" title="City"><option value="All">All Cities</option></select>
+    <select id="f-facility" title="FC"><option value="All">All FCs</option></select>
     <div class="filter-divider"></div>
     <select id="f-marketplace" title="Marketplace"><option value="All">All Marketplaces</option></select>
     <div class="filter-divider"></div>
@@ -269,7 +269,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
           <div class="panel-sub">Select metric — click multi-select to compare</div>
         </div>
         <div class="panel-head-right">
-          <select class="mini-select" id="trend-fc"><option value="All">All Cities</option></select>
+          <select class="mini-select" id="trend-fc"><option value="All">All FCs</option></select>
           <select class="mini-select" id="trend-client"><option value="All">All Clients</option></select>
           <select class="mini-select" id="trend-mkt">
             <option value="All">All Marketplaces</option>
@@ -309,7 +309,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       </div>
       <div class="panel" style="position:relative;">
         <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Category-wise Revenue</div><div class="panel-sub">Revenue by category_name (dim_category)</div></div><div style="display:flex;align-items:center;gap:6px;"><button class="btn-viz-export" onclick="exportViz('category_rev')">⬇ Export</button><span class="tag gold">Revenue</span></div></div>
-        <div class="chart-box" style="height:280px;"><canvas id="chartCategoryRev"></canvas></div>
+        <div class="chart-box" style="height:320px;"><canvas id="chartCategoryRev"></canvas></div>
         <div class="loading-overlay" id="load-cat"><div class="spinner"></div></div>
       </div>
     </div>
@@ -344,7 +344,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <div class="panel-head">
           <div class="panel-head-left"><div class="panel-title">COD vs Prepaid</div><div class="panel-sub">Payment mode split</div></div>
           <div class="panel-head-right">
-            <select class="mini-select" id="cod-fc"><option value="All">All Cities</option></select>
+            <select class="mini-select" id="cod-fc"><option value="All">All FCs</option></select>
             <select class="mini-select" id="cod-client"><option value="All">All Clients</option></select>
           </div>
         </div>
@@ -359,7 +359,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <div class="panel-head">
           <div class="panel-head-left"><div class="panel-title">Single vs Combo Shipments</div><div class="panel-sub">By tracking number SKU count</div></div>
           <div class="panel-head-right">
-            <select class="mini-select" id="stype-fc"><option value="All">All Cities</option></select>
+            <select class="mini-select" id="stype-fc"><option value="All">All FCs</option></select>
             <select class="mini-select" id="stype-client"><option value="All">All Clients</option></select>
           </div>
         </div>
@@ -508,7 +508,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <button class="btn-viz-export" onclick="exportInvViz('inv_trend')">⬇ Export</button>
       </div>
       <div id="load-inv-trend" class="loader-wrap"><div class="spin-ring"></div></div>
-      <div style="height:148px;"><canvas id="chartInvTrend"></canvas></div>
+      <div style="height:200px;"><canvas id="chartInvTrend"></canvas></div>
     </div>
   </div>
 
@@ -520,7 +520,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <button class="btn-viz-export" onclick="exportInvViz('inv_client')">⬇ Export</button>
       </div>
       <div id="load-inv-client" class="loader-wrap"><div class="spin-ring"></div></div>
-      <div style="height:200px;"><canvas id="chartInvClient"></canvas></div>
+      <div style="height:240px;"><canvas id="chartInvClient"></canvas></div>
     </div>
     <div class="panel">
       <div class="panel-head">
@@ -528,7 +528,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <button class="btn-viz-export" onclick="exportInvViz('inv_facility')">⬇ Export</button>
       </div>
       <div id="load-inv-facility" class="loader-wrap"><div class="spin-ring"></div></div>
-      <div style="height:200px;"><canvas id="chartInvFacility"></canvas></div>
+      <div style="height:240px;"><canvas id="chartInvFacility"></canvas></div>
     </div>
   </div>
 
@@ -538,7 +538,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <button class="btn-viz-export" onclick="exportInvViz('inv_category')">⬇ Export</button>
     </div>
     <div id="load-inv-cat" class="loader-wrap"><div class="spin-ring"></div></div>
-    <div style="height:200px;"><canvas id="chartInvCategory"></canvas></div>
+    <div style="height:240px;"><canvas id="chartInvCategory"></canvas></div>
   </div>
 
   <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Risk Monitoring</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
@@ -561,7 +561,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <div class="panel-head-left"><div class="panel-title">Dead Stock</div><div class="panel-sub">SKUs with 0 sale orders in last 30 days</div></div>
         <button class="btn-viz-export" onclick="exportInvViz('inv_dead')">⬇ Export</button>
       </div>
-      <div id="inv-dead-table" style="max-height:220px;overflow-y:auto;">
+      <div id="inv-dead-table" style="max-height:260px;overflow-y:auto;">
         <div style="text-align:center;color:var(--ink-soft);padding:40px;font-size:13px;">Loading…</div>
       </div>
     </div>
@@ -834,7 +834,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 </div><!-- .main -->
 
 <script>
-const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycby8sIkDTUp06lN5P2LPQcgBdBkqs0b5hdq77IHBygPwtd0S66CciMjYnEZY6vwlLFRAQg/exec';
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzJHf7LODlB0oEffh2bGp7Uqym6UAXjh1FkkHAAxkc8hcpGQvodUFkWNYHn5d11HKurHQ/exec';
 
 Chart.defaults.font.family = "'Inter', sans-serif";
 Chart.defaults.color = '#6B6660';
@@ -890,6 +890,46 @@ function getFilters(){
   document.getElementById(id)?.addEventListener('change', loadSaleOrders);
 });
 document.getElementById('btn-apply-so').addEventListener('click', loadSaleOrders);
+
+// ── COD mini-slicer reload ──────────────────────────────────
+async function reloadCOD(){
+  const extra={
+    client: document.getElementById('cod-client')?.value||'All',
+    city:   document.getElementById('cod-fc')?.value||'All',
+  };
+  const cod=await fetchData('sale_orders_cod_prepaid',{...getFilters(),...extra});
+  if(cod && cod.length){
+    const codN=parseInt(cod.find(r=>r.payment_mode==='COD')?.order_count)||0;
+    const preN=parseInt(cod.find(r=>r.payment_mode==='Prepaid')?.order_count)||0;
+    codChart.data.datasets[0].data=[codN,preN]; codChart.update();
+    document.getElementById('cod-lv-cod').textContent=fmtCount(codN);
+    document.getElementById('cod-lv-pre').textContent=fmtCount(preN);
+  }
+}
+['cod-fc','cod-client'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('change',reloadCOD);
+});
+
+// ── Single/Combo mini-slicer reload ─────────────────────────
+async function reloadSType(){
+  const extra={
+    client: document.getElementById('stype-client')?.value||'All',
+    city:   document.getElementById('stype-fc')?.value||'All',
+  };
+  const stype=await fetchData('sale_orders_shipment_type',{...getFilters(),...extra});
+  if(stype && stype.length){
+    const si=parseInt(stype.find(r=>r.shipment_type==='Single Item')?.order_count)||0;
+    const co=parseInt(stype.find(r=>r.shipment_type==='Combo Item')?.order_count)||0;
+    const pd=parseInt(stype.find(r=>r.shipment_type==='Pending Dispatch')?.order_count)||0;
+    stypeChart.data.datasets[0].data=[si,co,pd]; stypeChart.update();
+    document.getElementById('stype-lv-single').textContent=fmtCount(si);
+    document.getElementById('stype-lv-combo').textContent=fmtCount(co);
+    document.getElementById('stype-lv-pd').textContent=fmtCount(pd);
+  }
+}
+['stype-fc','stype-client'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('change',reloadSType);
+});
 
 // ── Trend mini-slicer: reloads ONLY the master trend chart ──
 async function loadTrend(){
@@ -1045,7 +1085,7 @@ function initCharts(){
       responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmtCount(c.raw)+' shipments'}}},
       scales:{
-        x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0,font:{size:10.5},callback:function(val,i){const lbl=this.getLabelForValue(val);if(!lbl)return'';const w=lbl.split(' ');return w.length>1?[w.slice(0,Math.ceil(w.length/2)).join(' '),w.slice(Math.ceil(w.length/2)).join(' ')]:lbl;}}},
+        x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0,autoSkip:false,font:{size:10},padding:2,callback:function(val,i){const lbl=this.getLabelForValue(val);if(!lbl)return'';const w=lbl.split(' ');return w.length>1?[w.slice(0,Math.ceil(w.length/2)).join(' '),w.slice(Math.ceil(w.length/2)).join(' ')]:lbl;}}},
         y:{grid:{color:LINE},ticks:{callback:v=>v>=1000?(v/1000)+'k':v}}
       }
     }
@@ -1067,7 +1107,7 @@ function initCharts(){
     },borderRadius:6,barThickness:22}]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'₹'+parseFloat(c.raw).toFixed(2)+'L'}}},
-      scales:{x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0,font:{size:10.5},callback:function(val,i){const lbl=this.getLabelForValue(val);if(!lbl)return'';const w=lbl.split(' ');return w.length>1?[w.slice(0,Math.ceil(w.length/2)).join(' '),w.slice(Math.ceil(w.length/2)).join(' ')]:lbl;}}},y:{grid:{color:LINE}}}}
+      layout:{padding:{bottom:8}},scales:{x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0,autoSkip:false,font:{size:9},padding:4,callback:function(val,i){const lbl=this.getLabelForValue(val);if(!lbl)return'';const w=lbl.split(' ');return w.length>1?[w.slice(0,Math.ceil(w.length/2)).join(' '),w.slice(Math.ceil(w.length/2)).join(' ')]:lbl;}}},y:{grid:{color:LINE},ticks:{callback:v=>'₹'+(v>=1e7?(v/1e7).toFixed(1)+'Cr':v>=1e5?(v/1e5).toFixed(1)+'L':v>=1000?(v/1000).toFixed(0)+'k':v)}}}}
   });
 
   tatChart=new Chart(document.getElementById('chartTATAdherence'),{
@@ -1140,18 +1180,44 @@ async function loadFilterOptions(){
 
   // Marketplace groups (from marketplace_group column)
   const mkts=[...new Set(rows.map(r=>r.marketplace_group).filter(Boolean))].sort();
+  const allMktSelects=['f-marketplace','trend-mkt'];
   mkts.forEach(m=>{
-    [mktSel,...miniMkts.map(id=>document.getElementById(id))].forEach(sel=>{
+    allMktSelects.map(id=>document.getElementById(id)).forEach(sel=>{
       if(!sel) return;
       const o=document.createElement('option'); o.value=m; o.textContent=m; sel.appendChild(o);
     });
   });
+
+  // Populate mini-FC selects (trend-fc, cod-fc, stype-fc) with cities too
+  const allMiniCitySelects=['trend-fc','cod-fc','stype-fc'];
+  allMiniCitySelects.forEach(id=>{
+    const sel=document.getElementById(id); if(!sel) return;
+    while(sel.options.length>1) sel.remove(1);
+    [...new Set(allCities.map(r=>r.city))].sort().forEach(c=>{
+      const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o);
+    });
+  });
+
+  // Populate inventory page client/city selects
+  const invClientSel=document.getElementById('inv-client');
+  const invCitySel  =document.getElementById('inv-facility');
+  if(invClientSel){
+    clients.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; invClientSel.appendChild(o); });
+  }
+  if(invCitySel){
+    [...new Set(allCities.map(r=>r.city))].sort().forEach(c=>{
+      const o=document.createElement('option'); o.value=c; o.textContent=c; invCitySel.appendChild(o);
+    });
+  }
+
+  // Update inv-facility label to "All Cities"
+  if(invCitySel && invCitySel.options[0]) invCitySel.options[0].textContent='All Cities';
 }
 
 // ---- MAIN LOAD FUNCTION ----
 async function loadSaleOrders(){
   ['load-trend','load-cod','load-shiptype','load-client','load-courier',
-   'load-sku','load-cat','load-tat','load-tat-tbl','load-tatdist','load-couriersla','load-tat-viz'].forEach(showLoader);
+   'load-sku','load-cat','load-tat-tbl','load-tatdist','load-couriersla','load-tat-viz'].forEach(showLoader);
   ['kpi-total-orders','kpi-total-units','kpi-revenue','kpi-shipments','kpi-fulfillment','kpi-cancellation',
    'kpi-aov','kpi-discount','kpi-tax'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent='—'; });
 
@@ -1212,7 +1278,7 @@ async function loadSaleOrders(){
   hideLoader('load-shiptype');
 
   if(byClient && byClient.length){
-    const nonZeroClients=byClient.filter(r=>(parseInt(r.order_count)||0)>0);
+    const nonZeroClients=byClient.filter(r=>(parseInt(r.order_count)||0)>0 && r.client_name && r.client_name.trim()!=='');
     clientChart.data.labels=nonZeroClients.map(r=>r.client_name);
     clientChart.data.datasets[0].data=nonZeroClients.map(r=>parseInt(r.order_count)||0);
     const clientColors=['#FF6A32','#E8823C','#FFB238','#C9A842','#6BAE72','#3E7CB1','#9B6BB5','#DD4B39','#4ECDC4','#F7B731'];
@@ -1276,9 +1342,9 @@ async function loadSaleOrders(){
       window.tatAdherenceVizChart.data.datasets[0].data=distVals;
       window.tatAdherenceVizChart.update();
     }
-    hideLoader('load-tat-viz');
   }
   hideLoader('load-tatdist');
+  hideLoader('load-tat-viz'); // always hide, even if no data
 
   if(courierSla && courierSla.length){
     courierSlaChart.data.labels=courierSla.map(r=>r.courier);
@@ -1367,7 +1433,7 @@ function initInventoryCharts() {
     type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:5, barThickness:20 }] }, options: hBar
   });
   invFacilityChart = new Chart(document.getElementById('chartInvFacility'), {
-    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:5, barThickness:18 }] }, options: hBar
+    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:5, barThickness:16, barPercentage:0.7, categoryPercentage:0.6 }] }, options: hBar
   });
   invCatChart = new Chart(document.getElementById('chartInvCategory'), {
     type:'bar',
@@ -1379,7 +1445,7 @@ function initInventoryCharts() {
 
 function getInvFilters() {
   return { client: document.getElementById('inv-client').value,
-           facility: document.getElementById('inv-facility').value,
+           city: document.getElementById('inv-facility').value,      // city filter
            invType: document.getElementById('inv-inv-type').value,
            snapshotDate: document.getElementById('inv-snapshot').value };
 }
@@ -1394,10 +1460,15 @@ async function loadInventory() {
   const params = { client: f.client, facility: f.facility };
   if (f.snapshotDate) params.snapshotDate = f.snapshotDate;
 
+  // MTD range for trend
+  const today = new Date(); const todayStr = today.toISOString().split('T')[0];
+  const mtdStart = todayStr.substring(0,8)+'01'; // first of current month
+  const trendParams = {...params, dateFrom: mtdStart, dateTo: todayStr};
+
   const [kpi, byType, trend, byClient, byFacility, byCat, expiry, dead] = await Promise.all([
     fetchData('inventory_kpi', params, true),
     fetchData('inventory_by_type', params, true),
-    fetchData('inventory_trend', params, true),
+    fetchData('inventory_trend', trendParams, true),
     fetchData('inventory_by_client', params, true),
     fetchData('inventory_by_facility', params, true),
     fetchData('inventory_by_category', params, true),
@@ -1833,8 +1904,10 @@ window.addEventListener('load',async()=>{
   await loadFilterOptions();
   await loadSaleOrders();
   // Set today as default snapshot for inventory
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('inv-snapshot').value = today;
+  const todayDate = new Date().toISOString().split('T')[0];
+  document.getElementById('inv-snapshot').value = todayDate;
+  const invChip = document.getElementById('inv-date-chip');
+  if(invChip) invChip.textContent = '📅 Snapshot: ' + todayDate;
 });
 </script>
 </body>
