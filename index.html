@@ -1154,13 +1154,18 @@ function initCharts(){
   });
 
   // TAT Distribution chart in Viz tab (mirrors analytics tab chart)
-  window.tatAdherenceVizChart=new Chart(document.getElementById('chartTATAdherenceViz'),{
-    type:'bar',
-    data:{labels:['0-6h','6-12h','12-18h','18-24h','24-36h','36h+'],datasets:[{data:[0,0,0,0,0,0],backgroundColor:[GREEN,AMBER,ORANGE,ORANGE_DEEP,RED,'#8B0000'],borderRadius:6,barThickness:36}]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmtCount(c.raw)+' orders'}}},
-      scales:{x:{grid:{display:false},ticks:{font:{size:12}}},y:{grid:{color:LINE},ticks:{callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}}}
-  });
+  // Wrapped in null check — if canvas doesn't exist, skip gracefully
+  // without crashing initCharts() and blocking subsequent chart inits.
+  const _vizTatEl = document.getElementById('chartTATAdherenceViz');
+  if (_vizTatEl) {
+    window.tatAdherenceVizChart=new Chart(_vizTatEl,{
+      type:'bar',
+      data:{labels:['0-6h','6-12h','12-18h','18-24h','24-36h','36h+'],datasets:[{data:[0,0,0,0,0,0],backgroundColor:[GREEN,AMBER,ORANGE,ORANGE_DEEP,RED,'#8B0000'],borderRadius:6,barThickness:36}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmtCount(c.raw)+' orders'}}},
+        scales:{x:{grid:{display:false},ticks:{font:{size:12}}},y:{grid:{color:LINE},ticks:{callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}}}
+    });
+  }
 
   courierSlaChart=new Chart(document.getElementById('chartCourierSla'),{
     type:'bar',
