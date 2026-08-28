@@ -1135,16 +1135,7 @@ function initCharts(){
       layout:{padding:{bottom:8}},scales:{x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0,autoSkip:false,font:{size:9},padding:4,callback:function(val,i){const lbl=this.getLabelForValue(val);if(!lbl)return'';const w=lbl.split(' ');return w.length>1?[w.slice(0,Math.ceil(w.length/2)).join(' '),w.slice(Math.ceil(w.length/2)).join(' ')]:lbl;}}},y:{grid:{color:LINE},ticks:{callback:v=>'₹'+(v>=1e7?(v/1e7).toFixed(1)+'Cr':v>=1e5?(v/1e5).toFixed(1)+'L':v>=1000?(v/1000).toFixed(0)+'k':v)}}}}
   });
 
-  tatChart=new Chart(document.getElementById('chartTATAdherence'),{
-    type:'bar',
-    data:{labels:[],datasets:[
-      {label:'Within TAT',data:[],backgroundColor:ORANGE,borderRadius:4},
-      {label:'Post TAT',data:[],backgroundColor:'rgba(221,75,57,.75)',borderRadius:4}
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{position:'top',align:'end',labels:{usePointStyle:true,boxWidth:7,padding:12}}},
-      scales:{x:{grid:{display:false},ticks:{maxRotation:0}},y:{grid:{color:LINE},max:100,title:{display:true,text:'% of Orders'}}}}
-  });
+  // tatChart removed — canvas replaced by chartTATAdherenceViz in viz tab
 
   tatDistChart=new Chart(document.getElementById('chartTATDist'),{
     type:'bar',
@@ -1156,7 +1147,7 @@ function initCharts(){
   // TAT Distribution chart in Viz tab (mirrors analytics tab chart)
   // Wrapped in null check — if canvas doesn't exist, skip gracefully
   // without crashing initCharts() and blocking subsequent chart inits.
-  const _vizTatEl = document.getElementById('chartTATAdherenceViz');
+  try { const _vizTatEl = document.getElementById('chartTATAdherenceViz');
   if (_vizTatEl) {
     window.tatAdherenceVizChart=new Chart(_vizTatEl,{
       type:'bar',
@@ -1343,10 +1334,10 @@ async function loadSaleOrders(){
   hideLoader('load-cat');
 
   if(tat && tat.length){
-    tatChart.data.labels=tat.map(r=>r.client_name);
-    tatChart.data.datasets[0].data=tat.map(r=>parseFloat(r.within_tat_pct)||0);
-    tatChart.data.datasets[1].data=tat.map(r=>100-(parseFloat(r.within_tat_pct)||0));
-    tatChart.update();
+    if(tatChart){ tatChart.data.labels=tat.map(r=>r.client_name);
+tatChart.data.datasets[0].data=tat.map(r=>parseFloat(r.within_tat_pct)||0);
+tatChart.data.datasets[1].data=tat.map(r=>100-(parseFloat(r.within_tat_pct)||0));
+tatChart.update(); }
     const tbody=document.getElementById('tat-table-body');
     const header=tbody.querySelector('.tat-row');
     tbody.innerHTML=''; tbody.appendChild(header);
@@ -1963,3 +1954,4 @@ window.addEventListener('load',async()=>{
 </script>
 </body>
 </html>
+  } catch(e){ console.warn('initCharts error:', e.message); }
