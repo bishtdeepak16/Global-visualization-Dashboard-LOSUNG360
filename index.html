@@ -967,7 +967,7 @@ function _cacheGet(module, params) {
   const k = _cacheKey(module, params);
   const entry = window._dataCache[k];
   if (!entry) return undefined;
-  if (Date.now() - entry.ts > 10 * 60 * 1000) { delete window._dataCache[k]; return undefined; }
+  // No expiry — flat tables rebuild at 2AM, cache valid for entire session
   return entry.data;
 }
 function _cacheSet(module, params, data) {
@@ -1379,6 +1379,10 @@ async function loadSaleOrders(){
     courierSlaChart.update();
   }
   hideLoader('load-couriersla');
+
+  // Safety net: force-hide all loaders in case any query failed silently
+  ['load-trend','load-cod','load-shiptype','load-client','load-courier',
+   'load-sku','load-cat','load-tat-tbl','load-tatdist','load-couriersla','load-tat-viz'].forEach(hideLoader);
 
   // insights
   if(kpi){
@@ -1930,6 +1934,19 @@ window.addEventListener('load',async()=>{
   initInventoryCharts();
   initPutawayCharts();
   initGRNCharts();
+
+  // Default date range: MTD — 1st of current month to yesterday
+  const _now   = new Date();
+  const _tz    = d => d.toISOString().split('T')[0]; // yyyy-MM-dd
+  const _yesterday = new Date(_now); _yesterday.setDate(_now.getDate()-1);
+  const _firstOfMonth = new Date(_now.getFullYear(), _now.getMonth(), 1);
+  const _fromStr = _tz(_firstOfMonth);
+  const _toStr   = _tz(_yesterday);
+  const fromEl = document.getElementById('f-from');
+  const toEl   = document.getElementById('f-to');
+  if(fromEl) fromEl.value = _fromStr;
+  if(toEl)   toEl.value   = _toStr;
+
   await loadFilterOptions();
   await loadSaleOrders();
   // Set today as default snapshot for inventory
