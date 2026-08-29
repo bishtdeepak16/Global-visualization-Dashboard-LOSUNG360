@@ -29,6 +29,13 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 @keyframes spin{to{transform:rotate(360deg)}}
 
 
+/* ── GRN trend bar shine ──────────────────────────── */
+.grn-bar-shine{position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(0deg,transparent 0%,transparent 30%,rgba(255,255,255,.08) 50%,transparent 70%,transparent 100%);
+  background-size:100% 400%;
+  animation:grn-sweep 3.5s ease-in-out infinite;}
+@keyframes grn-sweep{0%{background-position:0 200%}50%{background-position:0 -100%}100%{background-position:0 200%}}
+
 /* ── Expiry slabs ─────────────────────────────────── */
 .expiry-slab{border-radius:12px;padding:12px 16px;display:flex;flex-direction:column;gap:6px;}
 .expiry-slab.critical{background:linear-gradient(120deg,rgba(221,75,57,.08),rgba(221,75,57,.04));border:1px solid rgba(221,75,57,.2);}
@@ -650,11 +657,15 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Volume Analysis</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
   <div class="panel" style="margin-bottom:14px;">
     <div class="panel-head">
-      <div class="panel-head-left"><div class="panel-title">Daily Putaway Volume</div><div class="panel-sub">Units putaway per day</div></div>
-      <button class="btn-viz-export" onclick="exportPtaViz('pta_daily')">⬇ Export</button>
+      <div class="panel-head-left"><div class="panel-title">Daily Putaway Volume</div><div class="panel-sub">Units putaway per day · MTD</div></div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <select class="mini-select" id="pta-daily-fc"     style="font-size:11px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);"><option value="All">All FCs</option></select>
+        <select class="mini-select" id="pta-daily-client" style="font-size:11px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);"><option value="All">All Clients</option></select>
+        <button class="btn-viz-export" onclick="exportPtaViz('pta_daily')">⬇ Export</button>
+      </div>
     </div>
     <div id="load-pta-daily" class="loader-wrap"><div class="spin-ring"></div></div>
-    <div style="height:180px;"><canvas id="chartPtaDaily"></canvas></div>
+    <div style="height:220px;"><canvas id="chartPtaDaily"></canvas></div>
   </div>
 
   <div class="grid grid-2b" style="margin-bottom:14px;">
@@ -747,8 +758,15 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <div class="panel-head-left"><div class="panel-title">GRN Volume Trend</div><div class="panel-sub">Daily GRN count and units received</div></div>
       <button class="btn-viz-export" onclick="exportGRNViz('grn_trend')">⬇ Export</button>
     </div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;">
+      <select class="mini-select" id="grn-trend-fc"  style="font-size:11px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);"><option value="All">All FCs</option></select>
+      <select class="mini-select" id="grn-trend-client" style="font-size:11px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);"><option value="All">All Clients</option></select>
+    </div>
     <div id="load-grn-trend" class="loader-wrap"><div class="spin-ring"></div></div>
-    <div style="height:200px;"><canvas id="chartGRNTrend"></canvas></div>
+    <div class="grn-trend-wrap" style="position:relative;height:240px;">
+      <canvas id="chartGRNTrend"></canvas>
+      <div class="grn-bar-shine"></div>
+    </div>
   </div>
 
   <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Vendor Analysis</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
@@ -759,16 +777,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <button class="btn-viz-export" onclick="exportGRNViz('grn_vendor_vol')">⬇ Export</button>
       </div>
       <div id="load-grn-vendor" class="loader-wrap"><div class="spin-ring"></div></div>
-      <div style="height:220px;"><canvas id="chartGRNVendorVol"></canvas></div>
+      <div style="height:280px;"><canvas id="chartGRNVendorVol"></canvas></div>
     </div>
-    <div class="panel">
-      <div class="panel-head">
-        <div class="panel-head-left"><div class="panel-title">Vendor-wise Rejection Rate</div><div class="panel-sub">% rejected by vendor</div></div>
-        <button class="btn-viz-export" onclick="exportGRNViz('grn_vendor_rej')">⬇ Export</button>
-      </div>
-      <div id="load-grn-vendor-rej" class="loader-wrap"><div class="spin-ring"></div></div>
-      <div style="height:220px;"><canvas id="chartGRNVendorRej"></canvas></div>
-    </div>
+<!-- Vendor rejection rate removed — Rejection Reason Breakdown below serves this purpose -->
   </div>
 
   <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Inbound Breakdown</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
@@ -779,7 +790,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <button class="btn-viz-export" onclick="exportGRNViz('grn_client')">⬇ Export</button>
       </div>
       <div id="load-grn-client" class="loader-wrap"><div class="spin-ring"></div></div>
-      <div style="height:200px;"><canvas id="chartGRNClient"></canvas></div>
+      <div style="height:260px;"><canvas id="chartGRNClient"></canvas></div>
     </div>
     <div class="panel">
       <div class="panel-head">
@@ -804,30 +815,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       </div>
     </div>
 
-    <!-- Expiry Risk Slabs -->
-    <div class="panel">
-      <div class="panel-head">
-        <div class="panel-head-left">
-          <div class="panel-title">Expiry-risk Items</div>
-          <div class="panel-sub">Days remaining from GRN date to expiry</div>
-        </div>
-        <button class="btn-viz-export" onclick="exportGRNViz('grn_expiry')">⬇ Export</button>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:10px;" id="grn-expiry-slabs">
-        <div class="expiry-slab critical">
-          <div class="slab-badge">🔴 Under 30 Days</div>
-          <div id="grn-exp-30"><span style="color:var(--ink-soft);font-size:12px;">Loading…</span></div>
-        </div>
-        <div class="expiry-slab warning">
-          <div class="slab-badge">🟠 30 – 60 Days</div>
-          <div id="grn-exp-60"><span style="color:var(--ink-soft);font-size:12px;">Loading…</span></div>
-        </div>
-        <div class="expiry-slab watch">
-          <div class="slab-badge">🟡 60 – 90 Days</div>
-          <div id="grn-exp-90"><span style="color:var(--ink-soft);font-size:12px;">Loading…</span></div>
-        </div>
-      </div>
-    </div>
+<!-- Expiry risk removed from GRN section -->
   </div>
 </div>
 
@@ -1240,6 +1228,26 @@ async function loadFilterOptions(){
     const sel=document.getElementById(id); if(!sel) return;
     clients.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
   });
+  // Putaway daily trend mini-slicers
+  ['pta-daily-fc'].forEach(id=>{
+    const sel=document.getElementById(id); if(!sel) return;
+    _cityList.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+  });
+  ['pta-daily-client'].forEach(id=>{
+    const sel=document.getElementById(id); if(!sel) return;
+    clients.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+  });
+
+  // GRN trend mini-slicers
+  ['grn-trend-fc'].forEach(id=>{
+    const sel=document.getElementById(id); if(!sel) return;
+    _cityList.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+  });
+  ['grn-trend-client'].forEach(id=>{
+    const sel=document.getElementById(id); if(!sel) return;
+    clients.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+  });
+
   ['pta-facility','grn-facility'].forEach(id=>{
     const sel=document.getElementById(id); if(!sel) return;
     _cityList.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
@@ -1630,21 +1638,40 @@ function initPutawayCharts() {
 
   ptaDailyChart = new Chart(document.getElementById('chartPtaDaily'), {
     type:'bar',
-    data:{ labels:[], datasets:[{ label:'Units Putaway', data:[], backgroundColor: ctx => { const v=ctx.raw||0; return v>500?ORANGE_DEEP:v>200?ORANGE:AMBER; }, borderRadius:5 }] },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
-      scales:{ x:{ grid:{ display:false }, ticks:{ maxTicksLimit:14 } }, y:{ grid:{ color:LINE } } } }
+    data:{ labels:[], datasets:[{ label:'Units Putaway', data:[],
+      backgroundColor: ctx => { const v=ctx.raw||0; return v>30000?ORANGE_DEEP:v>15000?ORANGE:AMBER; },
+      borderRadius:5, barPercentage:0.75, categoryPercentage:0.85 }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      animation:{ duration:1000, easing:'easeOutQuart', delay:ctx=>ctx.dataIndex*15 },
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:c=>fmtCount(c.raw)+' units' } } },
+      scales:{
+        x:{ grid:{ display:false },
+            ticks:{ maxRotation:0, minRotation:0, autoSkip:false, font:{size:8.5},
+              callback: function(val,i){
+                const lbl=this.getLabelForValue(val);
+                if(!lbl) return '';
+                const d=new Date(lbl+'T00:00:00');
+                const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                return [d.getDate(),mo[d.getMonth()]+"'"+String(d.getFullYear()).slice(2)];
+              }
+            }},
+        y:{ grid:{ color:LINE }, ticks:{ callback:v=>v>=100000?(v/100000).toFixed(1)+'L':v>=1000?Math.round(v/1000)+'k':v } }
+      } }
   });
 
   const hBar = { indexAxis:'y', responsive:true, maintainAspectRatio:false,
     plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label: c => fmtCount(c.raw)+' units' } } },
-    scales:{ x:{ grid:{ color:LINE } }, y:{ grid:{ display:false }, ticks:{ font:{ size:11 } } } }
+    scales:{
+      x:{ grid:{ color:LINE }, ticks:{ callback:v=>v>=100000?(v/100000).toFixed(1)+'L':v>=1000?Math.round(v/1000)+'k':v, font:{size:10} } },
+      y:{ grid:{ display:false }, ticks:{ font:{ size:11 } } }
+    }
   };
   const palette = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'];
   ptaFacilityChart = new Chart(document.getElementById('chartPtaFacility'), {
-    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'], borderRadius:6, barPercentage:0.55, categoryPercentage:0.65 }] }, options: hBar
+    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'], borderRadius:6, barPercentage:0.72, categoryPercentage:0.75 }] }, options: hBar
   });
   ptaClientChart = new Chart(document.getElementById('chartPtaClient'), {
-    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'], borderRadius:6, barPercentage:0.55, categoryPercentage:0.65 }] }, options: hBar
+    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'], borderRadius:6, barPercentage:0.72, categoryPercentage:0.75 }] }, options: hBar
   });
 }
 
@@ -1753,6 +1780,27 @@ async function exportPtaViz(key) {
   if (rows) downloadCsv(jsonToCsv(rows), cfg.file);
 }
 
+// ── Putaway Daily mini-slicer reload ───────────────────────────────
+async function reloadPtaDaily() {
+  showLoader('load-pta-daily');
+  const base = getPtaFilters();
+  const extra = {
+    city:   document.getElementById('pta-daily-fc')?.value     || 'All',
+    client: document.getElementById('pta-daily-client')?.value || 'All',
+  };
+  const merged = {...base, ...extra};
+  const daily = await fetchData('putaway_daily_trend', merged, true);
+  if(daily && daily.length){
+    ptaDailyChart.data.labels = daily.map(r=>r.date);
+    ptaDailyChart.data.datasets[0].data = daily.map(r=>parseInt(r.total_qty)||0);
+    ptaDailyChart.update();
+  }
+  hideLoader('load-pta-daily');
+}
+['pta-daily-fc','pta-daily-client'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('change', reloadPtaDaily);
+});
+
 document.getElementById('btn-export-pta').addEventListener('click', async () => {
   const btn = document.getElementById('btn-export-pta');
   btn.textContent='⏳ Exporting…'; btn.disabled=true;
@@ -1777,16 +1825,17 @@ function initGRNCharts() {
       },
       {
         type:'line', label:'GRN Count', data:[],
-        borderColor:GREEN, backgroundColor:'transparent',
+        borderColor:BLUE, backgroundColor:'transparent',
         fill:false, tension:0.4, borderWidth:2.5,
         pointRadius:3, pointBackgroundColor:GREEN, yAxisID:'y'
       }
     ]},
     options:{ responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false },
-      plugins:{ legend:{ position:'top', align:'end', labels:{ usePointStyle:true, boxWidth:7, padding:12 } } },
-      scales:{ x:{ grid:{ display:false }, ticks:{ maxTicksLimit:12 } },
-               y:{ grid:{ color:LINE }, position:'left' },
-               y1:{ grid:{ display:false }, position:'right' } } }
+      plugins:{ legend:{ position:'top', align:'end', labels:{ usePointStyle:true, pointStyle:'circle', boxWidth:8, padding:14, font:{size:11,weight:'600'} } } },
+      animation:{ duration:1200, easing:'easeOutQuart', delay: ctx => ctx.dataIndex*20 },
+      scales:{ x:{ grid:{ display:false }, ticks:{ maxTicksLimit:16, font:{size:10} } },
+               y:{ grid:{ color:LINE }, position:'left', title:{display:true,text:'GRN Count',font:{size:10}} },
+               y1:{ grid:{ display:false }, position:'right', title:{display:true,text:'Units',font:{size:10}}, ticks:{callback:v=>v>=100000?(v/100000).toFixed(1)+'L':v>=1000?Math.round(v/1000)+'k':v} } } }
   });
 
   const hBar = { indexAxis:'y', responsive:true, maintainAspectRatio:false,
@@ -1796,7 +1845,7 @@ function initGRNCharts() {
   const palette = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'];
 
   grnVendorVolChart = new Chart(document.getElementById('chartGRNVendorVol'), {
-    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:5, barThickness:18 }] },
+    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:5, barPercentage:0.6, categoryPercentage:0.7 }] },
     options:{ ...hBar, plugins:{ ...hBar.plugins, tooltip:{ callbacks:{ label: c=>fmtCount(c.raw)+' units' } } } }
   });
 
@@ -1808,7 +1857,7 @@ function initGRNCharts() {
   });
 
   grnClientChart = new Chart(document.getElementById('chartGRNClient'), {
-    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:5, barThickness:22 }] },
+    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:5, barPercentage:0.6, categoryPercentage:0.7 }] },
     options:{ ...hBar, plugins:{ ...hBar.plugins, tooltip:{ callbacks:{ label: c=>fmtCount(c.raw)+' units' } } } }
   });
 
@@ -1938,6 +1987,28 @@ async function exportGRNViz(key) {
   const rows = await fetchData(cfg.module, getGRNFilters());
   if (rows) downloadCsv(jsonToCsv(rows), cfg.file);
 }
+
+// ── GRN Trend mini-slicer reload ────────────────────────────────────
+async function reloadGRNTrend() {
+  showLoader('load-grn-trend');
+  const base = getGRNFilters();
+  const extra = {
+    city:   document.getElementById('grn-trend-fc')?.value     || 'All',
+    client: document.getElementById('grn-trend-client')?.value || 'All',
+  };
+  const merged = {...base, ...extra};
+  const trend = await fetchData('grn_trend', merged, true);
+  if (trend && trend.length) {
+    grnTrendChart.data.labels = trend.map(r=>r.date);
+    grnTrendChart.data.datasets[0].data = trend.map(r=>parseInt(r.units_received)||0);
+    grnTrendChart.data.datasets[1].data = trend.map(r=>parseInt(r.grn_count)||0);
+    grnTrendChart.update();
+  }
+  hideLoader('load-grn-trend');
+}
+['grn-trend-fc','grn-trend-client'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('change', reloadGRNTrend);
+});
 
 document.getElementById('btn-export-grn').addEventListener('click', async () => {
   const btn = document.getElementById('btn-export-grn');
