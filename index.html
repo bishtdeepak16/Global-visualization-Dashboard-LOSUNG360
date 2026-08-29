@@ -1871,8 +1871,8 @@ function initGRNCharts() {
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label: c=>fmtPct(c.raw) } } },
       scales:{ x:{ grid:{ color:LINE }, max:100 }, y:{ grid:{ display:false }, ticks:{ font:{ size:11 } } } } }
-  })
-  };
+  });
+  }
 
   grnClientChart = new Chart(document.getElementById('chartGRNClient'), {
     type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:5, barPercentage:0.6, categoryPercentage:0.7 }] },
