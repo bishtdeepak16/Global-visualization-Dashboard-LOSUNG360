@@ -664,7 +664,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <button class="btn-viz-export" onclick="exportPtaViz('pta_facility')">⬇ Export</button>
       </div>
       <div id="load-pta-fc" class="loader-wrap"><div class="spin-ring"></div></div>
-      <div style="height:200px;"><canvas id="chartPtaFacility"></canvas></div>
+      <div style="height:280px;"><canvas id="chartPtaFacility"></canvas></div>
     </div>
     <div class="panel">
       <div class="panel-head">
@@ -672,7 +672,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <button class="btn-viz-export" onclick="exportPtaViz('pta_client')">⬇ Export</button>
       </div>
       <div id="load-pta-client" class="loader-wrap"><div class="spin-ring"></div></div>
-      <div style="height:200px;"><canvas id="chartPtaClient"></canvas></div>
+      <div style="height:280px;"><canvas id="chartPtaClient"></canvas></div>
     </div>
   </div>
 
@@ -1233,6 +1233,17 @@ async function loadFilterOptions(){
 
   // Update inv-facility label to "All Cities"
   if(invCitySel && invCitySel.options[0]) invCitySel.options[0].textContent='All Cities';
+
+  // Populate Putaway and GRN section client/city dropdowns
+  const _cityList = [...new Set(allCities.map(r=>r.city))].sort();
+  ['pta-client','grn-client'].forEach(id=>{
+    const sel=document.getElementById(id); if(!sel) return;
+    clients.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+  });
+  ['pta-facility','grn-facility'].forEach(id=>{
+    const sel=document.getElementById(id); if(!sel) return;
+    _cityList.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+  });
 }
 
 // ---- MAIN LOAD FUNCTION ----
@@ -1630,16 +1641,16 @@ function initPutawayCharts() {
   };
   const palette = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'];
   ptaFacilityChart = new Chart(document.getElementById('chartPtaFacility'), {
-    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:5, barThickness:20 }] }, options: hBar
+    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'], borderRadius:6, barPercentage:0.55, categoryPercentage:0.65 }] }, options: hBar
   });
   ptaClientChart = new Chart(document.getElementById('chartPtaClient'), {
-    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:5, barThickness:20 }] }, options: hBar
+    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'], borderRadius:6, barPercentage:0.55, categoryPercentage:0.65 }] }, options: hBar
   });
 }
 
 function getPtaFilters() {
   return { client: document.getElementById('pta-client').value,
-           facility: document.getElementById('pta-facility').value,
+           city: document.getElementById('pta-facility').value,
            dateFrom: document.getElementById('pta-from').value,
            dateTo:   document.getElementById('pta-to').value };
 }
@@ -1702,26 +1713,29 @@ async function loadPutaway() {
 
   const palette = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'];
   if (byFacility && byFacility.length) {
-    ptaFacilityChart.data.labels = byFacility.map(r=>r.facility_code);
-    ptaFacilityChart.data.datasets[0].data = byFacility.map(r=>parseInt(r.total_qty)||0);
-    ptaFacilityChart.data.datasets[0].backgroundColor = byFacility.map((_,i)=>palette[i%palette.length]);
+    const top10PtaFac = byFacility.filter(r=>r.facility_code&&r.facility_code.trim()!=='').slice(0,10);
+    ptaFacilityChart.data.labels = top10PtaFac.map(r=>r.facility_code);
+    ptaFacilityChart.data.datasets[0].data = top10PtaFac.map(r=>parseInt(r.total_qty)||0);
+    ptaFacilityChart.data.datasets[0].backgroundColor = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'].slice(0,top10PtaFac.length);
     ptaFacilityChart.update();
   }
   hideLoader('load-pta-fc');
 
   if (byClient && byClient.length) {
-    ptaClientChart.data.labels = byClient.map(r=>r.client_name);
-    ptaClientChart.data.datasets[0].data = byClient.map(r=>parseInt(r.total_qty)||0);
-    ptaClientChart.data.datasets[0].backgroundColor = byClient.map((_,i)=>palette[i%palette.length]);
+    const top10PtaClient = byClient.filter(r=>r.client_name&&r.client_name.trim()!=='').slice(0,10);
+    ptaClientChart.data.labels = top10PtaClient.map(r=>r.client_name);
+    ptaClientChart.data.datasets[0].data = top10PtaClient.map(r=>parseInt(r.total_qty)||0);
+    ptaClientChart.data.datasets[0].backgroundColor = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'].slice(0,top10PtaClient.length);
     ptaClientChart.update();
   }
   hideLoader('load-pta-client');
 
   if (rejReasons && rejReasons.length) {
-    ptaRejChart.data.labels = rejReasons.map(r=>shortenLabel(r.rejection_reason||'Unknown',22));
+    const rejLabels = rejReasons.map(r=>(shortenLabel(r.rejection_reason||'Unknown',18)+(r.status_code&&r.status_code!='REJECTED'?' ('+r.status_code+')':'')));
+    ptaRejChart.data.labels = rejLabels;
     ptaRejChart.data.datasets[0].data = rejReasons.map(r=>parseInt(r.count)||0);
     ptaRejChart.update();
-    buildDynLegend('pta-rejection-legend', rejReasons.map(r=>shortenLabel(r.rejection_reason||'Unknown',22)), rejReasons.map(r=>parseInt(r.count)||0), [RED,AMBER,ORANGE,GOLD,BLUE,'#9B6BB5']);
+    buildDynLegend('pta-rejection-legend', rejLabels, rejReasons.map(r=>parseInt(r.count)||0), [RED,AMBER,ORANGE,GOLD,BLUE,'#9B6BB5']);
   }
 }
 
@@ -1754,10 +1768,19 @@ let grnTrendChart, grnVendorVolChart, grnVendorRejChart, grnClientChart, grnCatC
 
 function initGRNCharts() {
   grnTrendChart = new Chart(document.getElementById('chartGRNTrend'), {
-    type:'line',
+    type:'bar',
     data:{ labels:[], datasets:[
-      { label:'GRN Count', data:[], borderColor:ORANGE, backgroundColor:'rgba(255,106,50,.12)', fill:true, tension:.4, borderWidth:2.5, pointRadius:0, yAxisID:'y' },
-      { label:'Units Received', data:[], borderColor:GREEN, backgroundColor:'rgba(29,154,108,.07)', fill:true, tension:.4, borderWidth:2, pointRadius:0, yAxisID:'y1' }
+      {
+        type:'bar', label:'Units Received', data:[],
+        backgroundColor:'rgba(255,106,50,0.72)', borderColor:ORANGE,
+        borderRadius:4, barPercentage:0.7, categoryPercentage:0.8, yAxisID:'y1'
+      },
+      {
+        type:'line', label:'GRN Count', data:[],
+        borderColor:GREEN, backgroundColor:'transparent',
+        fill:false, tension:0.4, borderWidth:2.5,
+        pointRadius:3, pointBackgroundColor:GREEN, yAxisID:'y'
+      }
     ]},
     options:{ responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false },
       plugins:{ legend:{ position:'top', align:'end', labels:{ usePointStyle:true, boxWidth:7, padding:12 } } },
@@ -1805,7 +1828,7 @@ function initGRNCharts() {
 
 function getGRNFilters() {
   return { client: document.getElementById('grn-client').value,
-           facility: document.getElementById('grn-facility').value,
+           city: document.getElementById('grn-facility').value,
            dateFrom: document.getElementById('grn-from').value,
            dateTo:   document.getElementById('grn-to').value };
 }
@@ -1843,8 +1866,8 @@ async function loadGRN() {
 
   if (trend && trend.length) {
     grnTrendChart.data.labels = trend.map(r=>r.date);
-    grnTrendChart.data.datasets[0].data = trend.map(r=>parseInt(r.grn_count)||0);
-    grnTrendChart.data.datasets[1].data = trend.map(r=>parseInt(r.units_received)||0);
+    grnTrendChart.data.datasets[0].data = trend.map(r=>parseInt(r.units_received)||0); // bar
+    grnTrendChart.data.datasets[1].data = trend.map(r=>parseInt(r.grn_count)||0);       // line
     grnTrendChart.update();
   }
   hideLoader('load-grn-trend');
@@ -1948,6 +1971,16 @@ window.addEventListener('load',async()=>{
   // Set today as default snapshot for inventory
   const todayDate = new Date().toISOString().split('T')[0];
   document.getElementById('inv-snapshot').value = todayDate;
+
+  // MTD defaults for Putaway and GRN sections
+  const _ptaFrom = document.getElementById('pta-from');
+  const _ptaTo   = document.getElementById('pta-to');
+  const _grnFrom = document.getElementById('grn-from');
+  const _grnTo   = document.getElementById('grn-to');
+  if(_ptaFrom) _ptaFrom.value = _fromStr;  // 1st of month
+  if(_ptaTo)   _ptaTo.value   = _toStr;    // yesterday
+  if(_grnFrom) _grnFrom.value = _fromStr;
+  if(_grnTo)   _grnTo.value   = _toStr;
   const invChip = document.getElementById('inv-date-chip');
   if(invChip) invChip.textContent = '📅 Snapshot: ' + todayDate;
 });
