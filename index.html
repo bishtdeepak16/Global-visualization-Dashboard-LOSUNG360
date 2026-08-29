@@ -838,6 +838,7 @@ Chart.defaults.font.size = 11.5;
 const ORANGE='#FF6A32', ORANGE_DEEP='#E24E14', AMBER='#FFB238',
       GOLD='#C9A842', GREEN='#1D9A6C', BLUE='#3E7CB1', RED='#DD4B39',
       LINE='#EAE4DB', PEACH='#FFE4D4';
+const PALETTE=[ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'];
 
 // ---- NAV ----
 document.querySelectorAll('.nav-item').forEach(item=>{
@@ -1481,9 +1482,9 @@ function initInventoryCharts() {
     plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label: c => fmtCount(c.raw)+' units' } } },
     scales:{ x:{ grid:{ color:LINE }, ticks:{ callback: v => v>=1000?(v/1000)+'k':v } }, y:{ grid:{ display:false }, ticks:{ font:{ size:11 } } } }
   };
-  const palette = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'];
+  // PALETTE is now a global constant
   invClientChart = new Chart(document.getElementById('chartInvClient'), {
-    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:5, barThickness:20 }] }, options: hBar
+    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: PALETTE, borderRadius:6, barPercentage:0.6, categoryPercentage:0.7 }] }, options: hBar
   });
   invFacilityChart = new Chart(document.getElementById('chartInvFacility'), {
     type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:5, barThickness:16, barPercentage:0.7, categoryPercentage:0.6 }] }, options: hBar
@@ -1562,7 +1563,7 @@ async function loadInventory() {
   }
   hideLoader('load-inv-trend');
 
-  const palette = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'];
+  // PALETTE is now a global constant
   if (byClient && byClient.length) {
     const validInvClients=byClient.filter(r=>r.client_name&&r.client_name.trim()!=='');
     invClientChart.data.labels = validInvClients.map(r=>r.client_name);
@@ -1673,7 +1674,7 @@ function initPutawayCharts() {
       y:{ grid:{ display:false }, ticks:{ font:{ size:11 } } }
     }
   };
-  const palette = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'];
+  // PALETTE is now a global constant
   ptaFacilityChart = new Chart(document.getElementById('chartPtaFacility'), {
     type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'], borderRadius:6, barPercentage:0.7, categoryPercentage:0.78 }] }, options: hBar
   });
@@ -1745,7 +1746,7 @@ async function loadPutaway() {
   }
   hideLoader('load-pta-daily');
 
-  const palette = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'];
+  // PALETTE is now a global constant
   if (byFacility && byFacility.length) {
     const top10PtaFac = byFacility.filter(r=>r.facility_code&&r.facility_code.trim()!=='').slice(0,10);
     ptaFacilityChart.data.labels = top10PtaFac.map(r=>r.facility_code);
@@ -1849,7 +1850,7 @@ function initGRNCharts() {
     plugins:{ legend:{ display:false } },
     scales:{ x:{ grid:{ color:LINE } }, y:{ grid:{ display:false }, ticks:{ font:{ size:11 } } } }
   };
-  const palette = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'];
+  // PALETTE is now a global constant
 
   grnVendorVolChart = new Chart(document.getElementById('chartGRNVendorVol'), {
     type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:6, barPercentage:0.7, categoryPercentage:0.78 }] },
@@ -1881,7 +1882,7 @@ function initGRNCharts() {
 
   grnCatChart = new Chart(document.getElementById('chartGRNCategory'), {
     type:'bar',
-    data:{ labels:[], datasets:[{ data:[], backgroundColor: c=>palette[c.dataIndex%palette.length], borderRadius:5, barThickness:22 }] },
+    data:{ labels:[], datasets:[{ data:[], backgroundColor: c=>PALETTE[c.dataIndex%PALETTE.length], borderRadius:5, barThickness:22 }] },
     options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
       scales:{ x:{ grid:{ display:false }, ticks:{ maxRotation:0, font:{ size:10.5 } } }, y:{ grid:{ color:LINE } } } }
   });
@@ -1939,7 +1940,7 @@ async function loadGRN() {
   }
   hideLoader('load-grn-trend');
 
-  const palette = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'];
+  // PALETTE is now a global constant
   if (byVendorVol && byVendorVol.length) {
     grnVendorVolChart.data.labels = byVendorVol.map(r=>shortenLabel(r.vendor_name||r.vendor_code,20));
     grnVendorVolChart.data.datasets[0].data = byVendorVol.map(r=>parseInt(r.units_received)||0);
@@ -1950,7 +1951,7 @@ async function loadGRN() {
 
   // Top Vendors by GRN Count
   if (byVendorCount && byVendorCount.length && window.grnVendorCountChart) {
-    const palette = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'];
+    // PALETTE is now a global constant
     window.grnVendorCountChart.data.labels = byVendorCount.map(r=>shortenLabel(r.vendor_name||r.vendor_code,20));
     window.grnVendorCountChart.data.datasets[0].data = byVendorCount.map(r=>parseInt(r.grn_count)||0);
     window.grnVendorCountChart.data.datasets[0].backgroundColor = byVendorCount.map((_,i)=>palette[i%palette.length]);
