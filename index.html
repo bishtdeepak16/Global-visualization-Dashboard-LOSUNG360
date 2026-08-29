@@ -134,9 +134,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .panel-sub{font-size:11px;color:var(--ink-soft);margin-top:2px;}
 .panel-head-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
 .btn-viz-export{
-  background:none;border:1px solid var(--line);border-radius:7px;
-  padding:4px 10px;font-size:10.5px;font-weight:700;cursor:pointer;
-  color:var(--ink-soft);font-family:'Inter',sans-serif;
+  background:rgba(29,154,108,.08);border:1px solid rgba(29,154,108,.35);border-radius:8px;
+  padding:5px 12px;font-size:10.5px;font-weight:700;cursor:pointer;
+  color:#1D9A6C;font-family:'Inter',sans-serif;
   display:flex;align-items:center;gap:4px;transition:all .15s;
   white-space:nowrap;
 }
@@ -310,12 +310,12 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Revenue Breakdown</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
     <div class="grid grid-2b" style="margin-bottom:18px;">
       <div class="panel" style="position:relative;">
-        <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Top 10 SKUs by Revenue</div><div class="panel-sub">SUM total_price per SKU</div></div><div style="display:flex;align-items:center;gap:6px;"><button class="btn-viz-export" onclick="exportViz('top_skus')">⬇ Export</button><span class="tag gold">Revenue</span></div></div>
+        <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Top 10 SKUs by Revenue</div><div class="panel-sub">SUM total_price per SKU</div></div><div style="display:flex;align-items:center;gap:6px;"><button class="btn-viz-export" onclick="exportViz('top_skus')">↓ Export Excel</button><span class="tag gold">Revenue</span></div></div>
         <div class="chart-box" style="height:280px;"><canvas id="chartTopSkuRev"></canvas></div>
         <div class="loading-overlay" id="load-sku"><div class="spinner"></div></div>
       </div>
       <div class="panel" style="position:relative;">
-        <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Category-wise Revenue</div><div class="panel-sub">Revenue by category_name (dim_category)</div></div><div style="display:flex;align-items:center;gap:6px;"><button class="btn-viz-export" onclick="exportViz('category_rev')">⬇ Export</button><span class="tag gold">Revenue</span></div></div>
+        <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Category-wise Revenue</div><div class="panel-sub">Revenue by category_name (dim_category)</div></div><div style="display:flex;align-items:center;gap:6px;"><button class="btn-viz-export" onclick="exportViz('category_rev')">↓ Export Excel</button><span class="tag gold">Revenue</span></div></div>
         <div class="chart-box" style="height:320px;"><canvas id="chartCategoryRev"></canvas></div>
         <div class="loading-overlay" id="load-cat"><div class="spinner"></div></div>
       </div>
@@ -328,7 +328,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <div class="panel" style="position:relative;">
         <div class="panel-head">
           <div class="panel-head-left"><div class="panel-title">Client-wise Order Volume</div><div class="panel-sub">Orders per client in selected period</div></div>
-          <div style="display:flex;align-items:center;gap:6px;"><button class="btn-viz-export" onclick="exportViz('client_volume')">⬇ Export</button><span class="tag">Count</span></div>
+          <div style="display:flex;align-items:center;gap:6px;"><button class="btn-viz-export" onclick="exportViz('client_volume')">↓ Export Excel</button><span class="tag">Count</span></div>
         </div>
         <div class="chart-box" style="height:280px;"><canvas id="chartClientVolume"></canvas></div>
         <div class="loading-overlay" id="load-client"><div class="spinner"></div></div>
@@ -337,7 +337,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <div class="panel" style="position:relative;">
         <div class="panel-head">
           <div class="panel-head-left"><div class="panel-title">Shipping Provider-wise Shipments</div><div class="panel-sub">shipping_provider → dim_courier (normalized)</div></div>
-          <div style="display:flex;align-items:center;gap:6px;"><button class="btn-viz-export" onclick="exportViz('courier')">⬇ Export</button><span class="tag">Count</span></div>
+          <div style="display:flex;align-items:center;gap:6px;"><button class="btn-viz-export" onclick="exportViz('courier')">↓ Export Excel</button><span class="tag">Count</span></div>
         </div>
         <div class="chart-box" style="height:280px;"><canvas id="chartCourierVolume"></canvas></div>
         <div class="loading-overlay" id="load-courier"><div class="spinner"></div></div>
@@ -390,7 +390,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
             <div class="panel-sub">Order-to-dispatch time buckets</div>
           </div>
           <div style="display:flex;align-items:center;gap:6px;">
-            <button class="btn-viz-export" onclick="exportViz('tat_dist')">⬇ Export</button>
+            <button class="btn-viz-export" onclick="exportViz('tat_dist')">↓ Export Excel</button>
             <span class="tag">TAT</span>
           </div>
         </div>
@@ -491,7 +491,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="panel">
       <div class="panel-head">
         <div class="panel-head-left"><div class="panel-title">Inventory Type Split</div><div class="panel-sub">GOOD · BAD · QC Rejected</div></div>
-        <button class="btn-viz-export" onclick="exportInvViz('inv_type')">⬇ Export</button>
+        <button class="btn-viz-export" onclick="exportInvViz('inv_type')">↓ Export Excel</button>
       </div>
       <div style="display:flex;align-items:center;gap:24px;">
         <div style="position:relative;width:160px;height:160px;flex-shrink:0;">
@@ -512,7 +512,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="panel">
       <div class="panel-head">
         <div class="panel-head-left"><div class="panel-title">Stock Trend over Time</div><div class="panel-sub">Daily snapshot — good inventory only</div></div>
-        <button class="btn-viz-export" onclick="exportInvViz('inv_trend')">⬇ Export</button>
+        <button class="btn-viz-export" onclick="exportInvViz('inv_trend')">↓ Export Excel</button>
       </div>
       <div id="load-inv-trend" class="loader-wrap"><div class="spin-ring"></div></div>
       <div style="height:200px;"><canvas id="chartInvTrend"></canvas></div>
@@ -524,7 +524,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="panel">
       <div class="panel-head">
         <div class="panel-head-left"><div class="panel-title">Client-wise Stock</div><div class="panel-sub">Good inventory by client</div></div>
-        <button class="btn-viz-export" onclick="exportInvViz('inv_client')">⬇ Export</button>
+        <button class="btn-viz-export" onclick="exportInvViz('inv_client')">↓ Export Excel</button>
       </div>
       <div id="load-inv-client" class="loader-wrap"><div class="spin-ring"></div></div>
       <div style="height:240px;"><canvas id="chartInvClient"></canvas></div>
@@ -532,7 +532,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="panel">
       <div class="panel-head">
         <div class="panel-head-left"><div class="panel-title">Facility-wise Stock</div><div class="panel-sub">Good inventory by FC</div></div>
-        <button class="btn-viz-export" onclick="exportInvViz('inv_facility')">⬇ Export</button>
+        <button class="btn-viz-export" onclick="exportInvViz('inv_facility')">↓ Export Excel</button>
       </div>
       <div id="load-inv-facility" class="loader-wrap"><div class="spin-ring"></div></div>
       <div style="height:240px;"><canvas id="chartInvFacility"></canvas></div>
@@ -542,7 +542,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <div class="panel" style="margin-bottom:14px;">
     <div class="panel-head">
       <div class="panel-head-left"><div class="panel-title">Category-wise Stock</div><div class="panel-sub">Good inventory by product category</div></div>
-      <button class="btn-viz-export" onclick="exportInvViz('inv_category')">⬇ Export</button>
+      <button class="btn-viz-export" onclick="exportInvViz('inv_category')">↓ Export Excel</button>
     </div>
     <div id="load-inv-cat" class="loader-wrap"><div class="spin-ring"></div></div>
     <div style="height:240px;"><canvas id="chartInvCategory"></canvas></div>
@@ -554,7 +554,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="panel">
       <div class="panel-head">
         <div class="panel-head-left"><div class="panel-title">Expiry-at-Risk Stock</div><div class="panel-sub">Items expiring within 90 days</div></div>
-        <button class="btn-viz-export" onclick="exportInvViz('inv_expiry')">⬇ Export</button>
+        <button class="btn-viz-export" onclick="exportInvViz('inv_expiry')">↓ Export Excel</button>
       </div>
       <div id="inv-expiry-table">
         <div class="expiry-slab critical"><div class="slab-badge">🔴 &lt;30 Days</div><div id="inv-exp-30">Loading…</div></div>
@@ -566,7 +566,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="panel">
       <div class="panel-head">
         <div class="panel-head-left"><div class="panel-title">Dead Stock</div><div class="panel-sub">SKUs with 0 sale orders in last 30 days</div></div>
-        <button class="btn-viz-export" onclick="exportInvViz('inv_dead')">⬇ Export</button>
+        <button class="btn-viz-export" onclick="exportInvViz('inv_dead')">↓ Export Excel</button>
       </div>
       <div id="inv-dead-table" style="max-height:260px;overflow-y:auto;">
         <div style="text-align:center;color:var(--ink-soft);padding:40px;font-size:13px;">Loading…</div>
@@ -634,7 +634,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="panel">
       <div class="panel-head">
         <div class="panel-head-left"><div class="panel-title">Putaway Type Split</div><div class="panel-sub">GRN · Return · Others</div></div>
-        <button class="btn-viz-export" onclick="exportPtaViz('pta_type')">⬇ Export</button>
+        <button class="btn-viz-export" onclick="exportPtaViz('pta_type')">↓ Export Excel</button>
       </div>
       <div style="display:flex;align-items:center;gap:24px;">
         <div style="width:160px;height:160px;flex-shrink:0;"><canvas id="chartPtaType"></canvas></div>
@@ -645,7 +645,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="panel">
       <div class="panel-head">
         <div class="panel-head-left"><div class="panel-title">Status Breakdown</div><div class="panel-sub">COMPLETE · PENDING · REJECTED</div></div>
-        <button class="btn-viz-export" onclick="exportPtaViz('pta_status')">⬇ Export</button>
+        <button class="btn-viz-export" onclick="exportPtaViz('pta_status')">↓ Export Excel</button>
       </div>
       <div style="display:flex;align-items:center;gap:24px;">
         <div style="width:160px;height:160px;flex-shrink:0;"><canvas id="chartPtaStatus"></canvas></div>
@@ -661,7 +661,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <div style="display:flex;align-items:center;gap:6px;">
         <select class="mini-select" id="pta-daily-fc"     style="font-size:11px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);"><option value="All">All FCs</option></select>
         <select class="mini-select" id="pta-daily-client" style="font-size:11px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);"><option value="All">All Clients</option></select>
-        <button class="btn-viz-export" onclick="exportPtaViz('pta_daily')">⬇ Export</button>
+        <button class="btn-viz-export" onclick="exportPtaViz('pta_daily')">↓ Export Excel</button>
       </div>
     </div>
     <div id="load-pta-daily" class="loader-wrap"><div class="spin-ring"></div></div>
@@ -672,7 +672,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="panel">
       <div class="panel-head">
         <div class="panel-head-left"><div class="panel-title">Facility-wise Volume</div><div class="panel-sub">Units putaway by FC</div></div>
-        <button class="btn-viz-export" onclick="exportPtaViz('pta_facility')">⬇ Export</button>
+        <button class="btn-viz-export" onclick="exportPtaViz('pta_facility')">↓ Export Excel</button>
       </div>
       <div id="load-pta-fc" class="loader-wrap"><div class="spin-ring"></div></div>
       <div style="height:280px;"><canvas id="chartPtaFacility"></canvas></div>
@@ -680,7 +680,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="panel">
       <div class="panel-head">
         <div class="panel-head-left"><div class="panel-title">Client-wise Volume</div><div class="panel-sub">Units putaway by client</div></div>
-        <button class="btn-viz-export" onclick="exportPtaViz('pta_client')">⬇ Export</button>
+        <button class="btn-viz-export" onclick="exportPtaViz('pta_client')">↓ Export Excel</button>
       </div>
       <div id="load-pta-client" class="loader-wrap"><div class="spin-ring"></div></div>
       <div style="height:280px;"><canvas id="chartPtaClient"></canvas></div>
@@ -690,7 +690,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <div class="panel" style="margin-bottom:14px;">
     <div class="panel-head">
       <div class="panel-head-left"><div class="panel-title">Rejection Reason Breakdown</div><div class="panel-sub">Why putaway items were rejected</div></div>
-      <button class="btn-viz-export" onclick="exportPtaViz('pta_rejection')">⬇ Export</button>
+      <button class="btn-viz-export" onclick="exportPtaViz('pta_rejection')">↓ Export Excel</button>
     </div>
     <div style="display:flex;align-items:center;gap:24px;">
       <div style="width:160px;height:160px;flex-shrink:0;"><canvas id="chartPtaRejection"></canvas></div>
@@ -756,12 +756,13 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <div class="panel" style="margin-bottom:14px;">
     <div class="panel-head">
       <div class="panel-head-left"><div class="panel-title">GRN Volume Trend</div><div class="panel-sub">Daily GRN count and units received</div></div>
-      <button class="btn-viz-export" onclick="exportGRNViz('grn_trend')">⬇ Export</button>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <select class="mini-select" id="grn-trend-fc"  style="font-size:11px;padding:4px 8px;border-radius:8px;border:1px solid rgba(29,154,108,.3);background:var(--bg);color:var(--ink);"><option value="All">All FCs</option></select>
+        <select class="mini-select" id="grn-trend-client" style="font-size:11px;padding:4px 8px;border-radius:8px;border:1px solid rgba(29,154,108,.3);background:var(--bg);color:var(--ink);"><option value="All">All Clients</option></select>
+        <button class="btn-viz-export" onclick="exportGRNViz('grn_trend')">↓ Export Excel</button>
+      </div>
     </div>
-    <div style="display:flex;gap:6px;margin-bottom:8px;">
-      <select class="mini-select" id="grn-trend-fc"  style="font-size:11px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);"><option value="All">All FCs</option></select>
-      <select class="mini-select" id="grn-trend-client" style="font-size:11px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);"><option value="All">All Clients</option></select>
-    </div>
+
     <div id="load-grn-trend" class="loader-wrap"><div class="spin-ring"></div></div>
     <div class="grn-trend-wrap" style="position:relative;height:240px;">
       <canvas id="chartGRNTrend"></canvas>
@@ -774,7 +775,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="panel">
       <div class="panel-head">
         <div class="panel-head-left"><div class="panel-title">Top Vendors by Volume</div><div class="panel-sub">Units received per vendor</div></div>
-        <button class="btn-viz-export" onclick="exportGRNViz('grn_vendor_vol')">⬇ Export</button>
+        <button class="btn-viz-export" onclick="exportGRNViz('grn_vendor_vol')">↓ Export Excel</button>
       </div>
       <div id="load-grn-vendor" class="loader-wrap"><div class="spin-ring"></div></div>
       <div style="height:280px;"><canvas id="chartGRNVendorVol"></canvas></div>
@@ -782,12 +783,23 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <!-- Vendor rejection rate removed — Rejection Reason Breakdown below serves this purpose -->
   </div>
 
+  <div class="grid grid-2b" style="margin-bottom:14px;">
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-head-left"><div class="panel-title">Top Vendors by GRN Count</div><div class="panel-sub">Number of GRNs per vendor</div></div>
+        <button class="btn-viz-export" onclick="exportGRNViz('grn_vendor_count')">↓ Export Excel</button>
+      </div>
+      <div id="load-grn-vendor-count" class="loader-wrap"><div class="spin-ring"></div></div>
+      <div style="height:280px;"><canvas id="chartGRNVendorCount"></canvas></div>
+    </div>
+  </div>
+
   <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Inbound Breakdown</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
   <div class="grid grid-2b" style="margin-bottom:14px;">
     <div class="panel">
       <div class="panel-head">
         <div class="panel-head-left"><div class="panel-title">Client-wise Inbound</div><div class="panel-sub">Units received per client</div></div>
-        <button class="btn-viz-export" onclick="exportGRNViz('grn_client')">⬇ Export</button>
+        <button class="btn-viz-export" onclick="exportGRNViz('grn_client')">↓ Export Excel</button>
       </div>
       <div id="load-grn-client" class="loader-wrap"><div class="spin-ring"></div></div>
       <div style="height:260px;"><canvas id="chartGRNClient"></canvas></div>
@@ -795,27 +807,22 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="panel">
       <div class="panel-head">
         <div class="panel-head-left"><div class="panel-title">Category-wise Inbound</div><div class="panel-sub">Units received per category</div></div>
-        <button class="btn-viz-export" onclick="exportGRNViz('grn_category')">⬇ Export</button>
+        <button class="btn-viz-export" onclick="exportGRNViz('grn_category')">↓ Export Excel</button>
       </div>
       <div id="load-grn-cat" class="loader-wrap"><div class="spin-ring"></div></div>
       <div style="height:200px;"><canvas id="chartGRNCategory"></canvas></div>
     </div>
   </div>
 
-  <div class="grid grid-2b" style="margin-bottom:14px;">
-    <!-- Rejection Reason Donut -->
-    <div class="panel">
-      <div class="panel-head">
-        <div class="panel-head-left"><div class="panel-title">Rejection Reason Breakdown</div><div class="panel-sub">Why items were rejected at GRN</div></div>
-        <button class="btn-viz-export" onclick="exportGRNViz('grn_rejection')">⬇ Export</button>
-      </div>
-      <div style="display:flex;align-items:center;gap:24px;">
-        <div style="width:160px;height:160px;flex-shrink:0;"><canvas id="chartGRNRejection"></canvas></div>
-        <div id="grn-rejection-legend" style="flex:1;display:flex;flex-direction:column;gap:8px;"></div>
-      </div>
+  <div class="panel" style="margin-bottom:14px;">
+    <div class="panel-head">
+      <div class="panel-head-left"><div class="panel-title">Rejection Reason Breakdown</div><div class="panel-sub">Why items were rejected at GRN</div></div>
+      <button class="btn-viz-export" onclick="exportGRNViz('grn_rejection')">↓ Export Excel</button>
     </div>
-
-<!-- Expiry risk removed from GRN section -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:48px;padding:20px 0;">
+      <div style="width:200px;height:200px;flex-shrink:0;"><canvas id="chartGRNRejection"></canvas></div>
+      <div id="grn-rejection-legend" style="display:flex;flex-direction:column;gap:10px;min-width:280px;max-width:420px;"></div>
+    </div>
   </div>
 </div>
 
@@ -1640,7 +1647,7 @@ function initPutawayCharts() {
     type:'bar',
     data:{ labels:[], datasets:[{ label:'Units Putaway', data:[],
       backgroundColor: ctx => { const v=ctx.raw||0; return v>30000?ORANGE_DEEP:v>15000?ORANGE:AMBER; },
-      borderRadius:5, barPercentage:0.75, categoryPercentage:0.85 }] },
+      borderRadius:5, barPercentage:0.82, categoryPercentage:0.88 }] },
     options:{ responsive:true, maintainAspectRatio:false,
       animation:{ duration:1000, easing:'easeOutQuart', delay:ctx=>ctx.dataIndex*15 },
       plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:c=>fmtCount(c.raw)+' units' } } },
@@ -1668,10 +1675,10 @@ function initPutawayCharts() {
   };
   const palette = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'];
   ptaFacilityChart = new Chart(document.getElementById('chartPtaFacility'), {
-    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'], borderRadius:6, barPercentage:0.72, categoryPercentage:0.75 }] }, options: hBar
+    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'], borderRadius:6, barPercentage:0.7, categoryPercentage:0.78 }] }, options: hBar
   });
   ptaClientChart = new Chart(document.getElementById('chartPtaClient'), {
-    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'], borderRadius:6, barPercentage:0.72, categoryPercentage:0.75 }] }, options: hBar
+    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'], borderRadius:6, barPercentage:0.7, categoryPercentage:0.78 }] }, options: hBar
   });
 }
 
@@ -1825,9 +1832,9 @@ function initGRNCharts() {
       },
       {
         type:'line', label:'GRN Count', data:[],
-        borderColor:BLUE, backgroundColor:'transparent',
+        borderColor:'#4DBDE8', backgroundColor:'transparent',
         fill:false, tension:0.4, borderWidth:2.5,
-        pointRadius:3, pointBackgroundColor:GREEN, yAxisID:'y'
+        pointRadius:3, pointBackgroundColor:'#4DBDE8', pointBorderColor:'#4DBDE8', yAxisID:'y'
       }
     ]},
     options:{ responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false },
@@ -1845,16 +1852,27 @@ function initGRNCharts() {
   const palette = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'];
 
   grnVendorVolChart = new Chart(document.getElementById('chartGRNVendorVol'), {
-    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:5, barPercentage:0.6, categoryPercentage:0.7 }] },
+    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:6, barPercentage:0.7, categoryPercentage:0.78 }] },
     options:{ ...hBar, plugins:{ ...hBar.plugins, tooltip:{ callbacks:{ label: c=>fmtCount(c.raw)+' units' } } } }
   });
 
-  grnVendorRejChart = new Chart(document.getElementById('chartGRNVendorRej'), {
+  // Top Vendors by GRN Count chart
+  window.grnVendorCountChart = new Chart(document.getElementById('chartGRNVendorCount'), {
+    type:'bar',
+    data:{ labels:[], datasets:[{ data:[], backgroundColor: [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'], borderRadius:6, barPercentage:0.7, categoryPercentage:0.78 }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>fmtCount(c.raw)+' GRNs'}} },
+      scales:{ x:{grid:{color:LINE}, ticks:{callback:v=>v>=1000?Math.round(v/1000)+'k':v}}, y:{grid:{display:false}, ticks:{font:{size:11}}} } }
+  });
+
+  const _gvrEl = document.getElementById('chartGRNVendorRej');
+  if(_gvrEl) grnVendorRejChart = new Chart(_gvrEl, {
     type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: c=>{ const v=parseFloat(c.raw); return v>10?RED:v>5?ORANGE:AMBER; }, borderRadius:5, barThickness:18 }] },
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label: c=>fmtPct(c.raw) } } },
       scales:{ x:{ grid:{ color:LINE }, max:100 }, y:{ grid:{ display:false }, ticks:{ font:{ size:11 } } } } }
-  });
+  })
+  };
 
   grnClientChart = new Chart(document.getElementById('chartGRNClient'), {
     type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:5, barPercentage:0.6, categoryPercentage:0.7 }] },
@@ -1883,7 +1901,7 @@ function getGRNFilters() {
 }
 
 async function loadGRN() {
-  ['load-grn-trend','load-grn-vendor','load-grn-vendor-rej','load-grn-client','load-grn-cat'].forEach(showLoader);
+  ['load-grn-trend','load-grn-vendor','load-grn-vendor-rej','load-grn-client','load-grn-cat','load-grn-vendor-count'].forEach(showLoader);
   ['grn-kpi-total','grn-kpi-units','grn-kpi-value','grn-kpi-rejection','grn-kpi-lead'].forEach(id => {
     const el = document.getElementById(id); if(el) el.textContent='—';
   });
@@ -1892,7 +1910,7 @@ async function loadGRN() {
   });
 
   const f = getGRNFilters();
-  const [kpi, trend, byVendorVol, byVendorRej, byClient, byCat, rejReasons, expiry] = await Promise.all([
+  const [kpi, trend, byVendorVol, byVendorRej, byClient, byCat, rejReasons, expiry, byVendorCount] = await Promise.all([
     fetchData('grn_kpi', f, true),
     fetchData('grn_trend', f, true),
     fetchData('grn_by_vendor', f, true),
@@ -1901,6 +1919,7 @@ async function loadGRN() {
     fetchData('grn_by_category', f, true),
     fetchData('grn_rejection_reasons', f, true),
     fetchData('grn_expiry_risk', f, true),
+    fetchData('grn_by_vendor_count', f, true),
   ]);
 
   if (kpi) {
@@ -1923,12 +1942,22 @@ async function loadGRN() {
 
   const palette = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'];
   if (byVendorVol && byVendorVol.length) {
-    grnVendorVolChart.data.labels = byVendorVol.map(r=>shortenLabel(r.vendor_name||r.vendor_code,24));
+    grnVendorVolChart.data.labels = byVendorVol.map(r=>shortenLabel(r.vendor_name||r.vendor_code,20));
     grnVendorVolChart.data.datasets[0].data = byVendorVol.map(r=>parseInt(r.units_received)||0);
     grnVendorVolChart.data.datasets[0].backgroundColor = byVendorVol.map((_,i)=>palette[i%palette.length]);
     grnVendorVolChart.update();
   }
   hideLoader('load-grn-vendor');
+
+  // Top Vendors by GRN Count
+  if (byVendorCount && byVendorCount.length && window.grnVendorCountChart) {
+    const palette = [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'];
+    window.grnVendorCountChart.data.labels = byVendorCount.map(r=>shortenLabel(r.vendor_name||r.vendor_code,20));
+    window.grnVendorCountChart.data.datasets[0].data = byVendorCount.map(r=>parseInt(r.grn_count)||0);
+    window.grnVendorCountChart.data.datasets[0].backgroundColor = byVendorCount.map((_,i)=>palette[i%palette.length]);
+    window.grnVendorCountChart.update();
+  }
+  hideLoader('load-grn-vendor-count');
 
   if (byVendorRej && byVendorRej.length) {
     grnVendorRejChart.data.labels = byVendorRej.map(r=>shortenLabel(r.vendor_name||r.vendor_code,24));
