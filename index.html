@@ -61,6 +61,17 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .dead-sku{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .dead-fc{font-size:11px;color:var(--ink-soft);}
 .dead-qty{font-weight:800;font-family:'Sora',sans-serif;color:var(--orange);}
+/* ── Chart-level metric selector ──────────────────── */
+.viz-metric-sel{font-size:11px;font-weight:600;padding:0 8px;height:28px;
+  border:1.5px solid var(--line);border-radius:7px;background:var(--panel);
+  color:var(--ink);cursor:pointer;outline:none;transition:border-color .15s;}
+.viz-metric-sel:hover,.viz-metric-sel:focus{border-color:var(--orange);}
+
+/* ── Document / Quantity pills ────────────────────── */
+.pill-btn{padding:3px 10px;border-radius:20px;border:1.5px solid var(--line);background:var(--panel);
+  color:var(--ink-soft);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;}
+.pill-btn.active{border-color:var(--orange);background:var(--orange);color:#fff;}
+
 /* ── Loader ───────────────────────────────────────── */
 .loader-wrap{display:flex;align-items:center;justify-content:center;padding:20px;}
 .spin-ring{width:24px;height:24px;border:3px solid var(--line);border-top-color:var(--orange);border-radius:50%;animation:spin .8s linear infinite;}
@@ -114,7 +125,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .kpi-card::after{content:'';position:absolute;width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.7) 0%,transparent 70%);top:-25px;right:-15px;pointer-events:none;}
 .kpi-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
 .kpi-label{font-size:11px;color:var(--ink-soft);font-weight:700;letter-spacing:.2px;}
-.kpi-icon{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--peach-soft),var(--peach));display:flex;align-items:center;justify-content:center;font-size:14px;}
+.kpi-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,rgba(255,106,50,.18),rgba(255,178,56,.14));border:1px solid rgba(255,106,50,.25);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 2px 8px rgba(255,106,50,.12);}
 .kpi-value{position:relative;z-index:2;font-family:'Sora',sans-serif;font-size:21px;font-weight:800;letter-spacing:-.5px;margin-bottom:5px;background:linear-gradient(135deg,var(--ink) 30%,var(--orange-deep) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
 .kpi-delta{font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px;}
 .kpi-delta.up{color:var(--green);}.kpi-delta.down{color:var(--red);}.kpi-delta.neutral{color:var(--ink-soft);}
@@ -177,8 +188,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .tat-row{display:grid;grid-template-columns:130px 1fr auto auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:12.5px;}
 .tat-row:last-child{border-bottom:none;}
 .tat-band{display:flex;height:20px;border-radius:6px;overflow:hidden;}
-.tat-band .within{background:linear-gradient(90deg,var(--orange),var(--amber));}
-.tat-band .after{background:linear-gradient(90deg,#FFD9BC,var(--red));}
+.tat-band .within{background:#22C55E;}
+.tat-band .after{background:#DD4B39;}
 
 /* INSIGHT CARD */
 .insight-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--peach-soft);display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;}
@@ -276,12 +287,16 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
           <div class="panel-sub">Select metric — click multi-select to compare</div>
         </div>
         <div class="panel-head-right">
-          <select class="mini-select" id="trend-fc"><option value="All">All FCs</option></select>
-          <select class="mini-select" id="trend-client"><option value="All">All Clients</option></select>
-          <select class="mini-select" id="trend-mkt">
-            <option value="All">All Marketplaces</option>
-            <option>Flipkart</option><option>Amazon</option><option>Meesho</option><option>D2C</option>
+          <select class="mini-select" id="trend-period-sel" onchange="onTrendPeriodChange(this.value)" style="font-weight:700;color:var(--orange);">
+            <option value="ytd">YTD Daily</option>
+            <option value="monthly">By Month</option>
+            <option value="quarterly">By Quarter</option>
+            <option value="mtd">MTD Daily</option>
           </select>
+          <!-- trend-fc, trend-client, trend-mkt removed: Master Trend now follows top slicers -->
+          <span id="trend-fc" style="display:none"></span>
+          <span id="trend-client" style="display:none"></span>
+          <span id="trend-mkt" style="display:none"></span>
           <span class="tag gold">Live</span>
         </div>
       </div>
@@ -310,13 +325,13 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Revenue Breakdown</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
     <div class="grid grid-2b" style="margin-bottom:18px;">
       <div class="panel" style="position:relative;">
-        <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Top 10 SKUs by Revenue</div><div class="panel-sub">SUM total_price per SKU</div></div><div style="display:flex;align-items:center;gap:6px;"><button class="btn-viz-export" onclick="exportViz('top_skus')">↓ Export Excel</button><span class="tag gold">Revenue</span></div></div>
-        <div class="chart-box" style="height:280px;"><canvas id="chartTopSkuRev"></canvas></div>
+        <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Top 10 SKUs by Revenue</div><div class="panel-sub">SUM total_price per SKU</div></div><div style="display:flex;align-items:center;gap:6px;"><select class="viz-metric-sel" id="sku-metric-sel" onchange="renderSkuByMetric(this.value)"><option value="revenue">By Revenue</option><option value="quantity">By Quantity</option><option value="orders">By Orders</option><option value="shipments">By Shipments</option></select><button class="btn-viz-export" onclick="exportViz('top_skus')">↓ Export Excel</button><span class="tag gold" id="sku-metric-tag">Revenue</span></div></div>
+        <div class="chart-box" style="height:300px;"><canvas id="chartTopSkuRev"></canvas></div>
         <div class="loading-overlay" id="load-sku"><div class="spinner"></div></div>
       </div>
       <div class="panel" style="position:relative;">
-        <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Category-wise Revenue</div><div class="panel-sub">Revenue by category_name (dim_category)</div></div><div style="display:flex;align-items:center;gap:6px;"><button class="btn-viz-export" onclick="exportViz('category_rev')">↓ Export Excel</button><span class="tag gold">Revenue</span></div></div>
-        <div class="chart-box" style="height:320px;"><canvas id="chartCategoryRev"></canvas></div>
+        <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Category-wise Revenue</div><div class="panel-sub">Revenue by category_name (dim_category)</div></div><div style="display:flex;align-items:center;gap:6px;"><select class="viz-metric-sel" id="cat-metric-sel" onchange="renderCatByMetric(this.value)"><option value="revenue">By Revenue</option><option value="orders">By Orders</option><option value="quantity">By Quantity</option><option value="shipments">By Shipments</option></select><button class="btn-viz-export" onclick="exportViz('category_rev')">↓ Export Excel</button><span class="tag gold" id="cat-metric-tag">Revenue</span></div></div>
+        <div class="chart-box" style="height:300px;"><canvas id="chartCategoryRev"></canvas></div>
         <div class="loading-overlay" id="load-cat"><div class="spinner"></div></div>
       </div>
     </div>
@@ -328,7 +343,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <div class="panel" style="position:relative;">
         <div class="panel-head">
           <div class="panel-head-left"><div class="panel-title">Client-wise Order Volume</div><div class="panel-sub">Orders per client in selected period</div></div>
-          <div style="display:flex;align-items:center;gap:6px;"><button class="btn-viz-export" onclick="exportViz('client_volume')">↓ Export Excel</button><span class="tag">Count</span></div>
+          <div style="display:flex;align-items:center;gap:6px;"><select class="viz-metric-sel" id="client-metric-sel" onchange="renderClientByMetric(this.value)"><option value="orders">By Orders</option><option value="revenue">By Revenue</option><option value="quantity">By Quantity</option><option value="shipments">By Shipments</option></select><button class="btn-viz-export" onclick="exportViz('client_volume')">↓ Export Excel</button><span class="tag" id="client-metric-tag">Count</span></div>
         </div>
         <div class="chart-box" style="height:280px;"><canvas id="chartClientVolume"></canvas></div>
         <div class="loading-overlay" id="load-client"><div class="spinner"></div></div>
@@ -336,8 +351,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <!-- Courier: VERTICAL bar -->
       <div class="panel" style="position:relative;">
         <div class="panel-head">
-          <div class="panel-head-left"><div class="panel-title">Shipping Provider-wise Shipments</div><div class="panel-sub">shipping_provider → dim_courier (normalized)</div></div>
-          <div style="display:flex;align-items:center;gap:6px;"><button class="btn-viz-export" onclick="exportViz('courier')">↓ Export Excel</button><span class="tag">Count</span></div>
+          <div class="panel-head-left"><div class="panel-title">Shipping Courier-wise Shipments</div></div>
+          <div style="display:flex;align-items:center;gap:6px;"><select class="viz-metric-sel" id="courier-metric-sel" onchange="renderCourierByMetric(this.value)"><option value="shipments">By Shipments</option><option value="orders">By Orders</option><option value="revenue">By Revenue</option><option value="quantity">By Quantity</option></select><button class="btn-viz-export" onclick="exportViz('courier')">↓ Export Excel</button><span class="tag" id="courier-metric-tag">Count</span></div>
         </div>
         <div class="chart-box" style="height:280px;"><canvas id="chartCourierVolume"></canvas></div>
         <div class="loading-overlay" id="load-courier"><div class="spinner"></div></div>
@@ -374,7 +389,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <div class="legend-list">
           <div class="legend-row"><div class="lab"><span class="swatch" style="background:var(--orange)"></span>Single Item</div><div class="val" id="lv-single">—</div></div>
           <div class="legend-row"><div class="lab"><span class="swatch" style="background:var(--amber)"></span>Combo</div><div class="val" id="lv-combo">—</div></div>
-          <div class="legend-row"><div class="lab"><span class="swatch" style="background:#FFD9BC"></span>Pending Dispatch</div><div class="val" id="lv-pending">—</div></div>
+          <div class="legend-row"><div class="lab"><span class="swatch" style="background:#E53935"></span>Pending Dispatch</div><div class="val" id="lv-pending">—</div></div>
         </div>
         <div class="loading-overlay" id="load-shiptype"><div class="spinner"></div></div>
       </div>
@@ -474,7 +489,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <div class="kpi-delta neutral" id="inv-kpi-blocked-pct">% of total</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-top"><span class="kpi-label">Damaged Qty</span><div class="kpi-icon">⚠️</div></div>
+      <div class="kpi-top"><span class="kpi-label">QC Rejected / Bad</span><div class="kpi-icon">⚠️</div></div>
       <div class="kpi-value" id="inv-kpi-damaged">—</div>
       <div class="kpi-delta neutral" id="inv-kpi-damaged-pct">% of total</div>
     </div>
@@ -527,7 +542,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <button class="btn-viz-export" onclick="exportInvViz('inv_client')">↓ Export Excel</button>
       </div>
       <div id="load-inv-client" class="loader-wrap"><div class="spin-ring"></div></div>
-      <div style="height:240px;"><canvas id="chartInvClient"></canvas></div>
+      <div style="height:260px;"><canvas id="chartInvClient"></canvas></div>
     </div>
     <div class="panel">
       <div class="panel-head">
@@ -535,7 +550,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <button class="btn-viz-export" onclick="exportInvViz('inv_facility')">↓ Export Excel</button>
       </div>
       <div id="load-inv-facility" class="loader-wrap"><div class="spin-ring"></div></div>
-      <div style="height:240px;"><canvas id="chartInvFacility"></canvas></div>
+      <div style="height:260px;"><canvas id="chartInvFacility"></canvas></div>
     </div>
   </div>
 
@@ -590,7 +605,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
   <div class="filter-bar">
     <select id="pta-client"><option value="All">All Clients</option></select>
-    <select id="pta-facility"><option value="All">All FCs</option></select>
+    <select id="pta-facility"><option value="All">All Cities</option></select>
     <div class="filter-divider"></div>
     <span class="date-label">From</span>
     <input type="date" id="pta-from"/>
@@ -645,7 +660,13 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="panel">
       <div class="panel-head">
         <div class="panel-head-left"><div class="panel-title">Status Breakdown</div><div class="panel-sub">COMPLETE · PENDING · REJECTED</div></div>
-        <button class="btn-viz-export" onclick="exportPtaViz('pta_status')">↓ Export Excel</button>
+        <div style="display:flex;align-items:center;gap:5px;">
+          <select class="mini-select" id="pta-status-type" onchange="reloadPtaStatus()" style="font-size:10px;max-width:120px;">
+            <option value="All">All Types</option>
+          </select>
+          <button class="pill-btn active" id="pta-doc-btn" onclick="setPtaStatusView('doc')">Document</button>
+          <button class="pill-btn" id="pta-qty-btn" onclick="setPtaStatusView('qty')">Quantity</button>
+        </div>
       </div>
       <div style="display:flex;align-items:center;gap:24px;">
         <div style="width:160px;height:160px;flex-shrink:0;"><canvas id="chartPtaStatus"></canvas></div>
@@ -714,7 +735,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
   <div class="filter-bar">
     <select id="grn-client"><option value="All">All Clients</option></select>
-    <select id="grn-facility"><option value="All">All FCs</option></select>
+    <select id="grn-facility"><option value="All">All Cities</option></select>
     <div class="filter-divider"></div>
     <span class="date-label">From</span>
     <input type="date" id="grn-from"/>
@@ -780,10 +801,6 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <div id="load-grn-vendor" class="loader-wrap"><div class="spin-ring"></div></div>
       <div style="height:280px;"><canvas id="chartGRNVendorVol"></canvas></div>
     </div>
-<!-- Vendor rejection rate removed — Rejection Reason Breakdown below serves this purpose -->
-  </div>
-
-  <div class="grid grid-2b" style="margin-bottom:14px;">
     <div class="panel">
       <div class="panel-head">
         <div class="panel-head-left"><div class="panel-title">Top Vendors by GRN Count</div><div class="panel-sub">Number of GRNs per vendor</div></div>
@@ -810,7 +827,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <button class="btn-viz-export" onclick="exportGRNViz('grn_category')">↓ Export Excel</button>
       </div>
       <div id="load-grn-cat" class="loader-wrap"><div class="spin-ring"></div></div>
-      <div style="height:200px;"><canvas id="chartGRNCategory"></canvas></div>
+      <div style="height:260px;"><canvas id="chartGRNCategory"></canvas></div>
     </div>
   </div>
 
@@ -874,11 +891,19 @@ function shortenLabel(s,max){ return s&&s.length>max?s.slice(0,max)+'…':s; }
 
 // ---- FILTERS ----
 function getFilters(){
-  return { dateFrom:document.getElementById('f-from').value, dateTo:document.getElementById('f-to').value,
-    client:document.getElementById('f-client').value,
-    city:document.getElementById('f-facility').value,          // city filter (facility_city)
-    marketplace:document.getElementById('f-marketplace').value, // marketplace_group filter
-    orderType:document.getElementById('f-type').value };
+  // Default to YTD (Jan 1 → yesterday IST) when date inputs are left empty
+  const _now    = new Date();
+  const _yr     = _now.getFullYear();
+  const _ytdFrom = _yr + '-01-01';
+  const _ytdTo   = new Date(_now.getTime() - 86400000).toISOString().slice(0,10);
+  const rawFrom = document.getElementById('f-from').value;
+  const rawTo   = document.getElementById('f-to').value;
+  return { dateFrom:    rawFrom || _ytdFrom,
+           dateTo:      rawTo   || _ytdTo,
+           client:      document.getElementById('f-client').value,
+           city:        document.getElementById('f-facility').value,
+           marketplace: document.getElementById('f-marketplace').value,
+           orderType:   document.getElementById('f-type').value };
 }
 
 // Auto-apply when client/FC/marketplace/type change (NOT date — date needs Apply button)
@@ -1028,7 +1053,7 @@ function buildMasterDatasets(trendData){
       return parseInt(r.quantity)||0;
     });
     return { label:cfg.label, data, borderColor:cfg.border,
-      backgroundColor:cfg.fill, fill:true, tension:.4,
+      backgroundColor:cfg.fill, fill:true, tension:0,
       borderWidth:2.5, pointRadius:0, yAxisID:cfg.yAxis, hidden };
   });
 }
@@ -1054,6 +1079,10 @@ document.querySelectorAll('.metric-btn').forEach(btn=>{
       METRIC_CONFIGS.forEach((_,i)=>{
         masterChart.getDatasetMeta(i).hidden = !activeMetrics.has(i);
       });
+      // Show right Y-axis only when at least one y1 metric (Revenue) is active.
+      // When only left-axis metrics are on, hiding y1 removes the confusing 0–1.0 scale.
+      const showY1 = METRIC_CONFIGS.some((cfg,i) => cfg.yAxis === 'y1' && activeMetrics.has(i));
+      masterChart.options.scales.y1.display = showY1;
       masterChart.update();
     }
   });
@@ -1064,10 +1093,26 @@ function initCharts(){
     type:'line',
     data:{labels:[],datasets:buildMasterDatasets(null)},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{display:false}},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            label:function(ctx){
+              // Skip hidden datasets — don't clutter tooltip
+              if(masterChart && masterChart.getDatasetMeta(ctx.datasetIndex).hidden) return null;
+              const cfg = METRIC_CONFIGS[ctx.datasetIndex];
+              if(!cfg) return null;
+              // Show axis direction so it's clear which Y-axis this metric belongs to
+              const axisTag = cfg.yAxis === 'y1' ? '  [→ Right axis]' : '  [← Left axis]';
+              return ' ' + cfg.label + ': ' + ctx.formattedValue + axisTag;
+            }
+          }
+        }
+      },
       scales:{x:{grid:{display:false},ticks:{maxRotation:0,maxTicksLimit:12}},
-              y:{grid:{color:LINE},position:'left'},
-              y1:{position:'right',grid:{display:false}}}}
+              y:{grid:{color:LINE},position:'left',title:{display:false}},
+              y1:{position:'right',grid:{display:false},display:false}}}
+              // y1 hidden by default — only shown when Revenue metric is active
   });
 
   codChart=new Chart(document.getElementById('chartCOD'),{
@@ -1078,7 +1123,7 @@ function initCharts(){
 
   stypeChart=new Chart(document.getElementById('chartShipmentType'),{
     type:'doughnut',
-    data:{labels:['Single Item','Combo','Pending'],datasets:[{data:[0,0,0],backgroundColor:[ORANGE,AMBER,'#FFD9BC'],borderWidth:0,cutout:'72%',hoverOffset:6}]},
+    data:{labels:['Single Item','Combo','Pending'],datasets:[{data:[0,0,0],backgroundColor:[ORANGE,AMBER,'#E53935'],hoverBackgroundColor:[ORANGE,AMBER,'#E53935'],borderWidth:0,cutout:'72%',hoverOffset:0}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
   });
 
@@ -1090,6 +1135,7 @@ function initCharts(){
     options:{
       indexAxis:'y',responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmtCount(c.raw)+' orders'}}},
+      layout:{padding:{bottom:14}},
       scales:{
         x:{grid:{color:LINE},ticks:{callback:v=>v>=1000?(v/1000)+'k':v}},
         y:{grid:{display:false},ticks:{font:{size:11.5,weight:'600'}}}
@@ -1101,12 +1147,13 @@ function initCharts(){
   const courierPalette=[ORANGE,AMBER,GOLD,GREEN,BLUE,'#9B6BB5','#DD4B39','#4ECDC4','#F7B731','#20B2AA','#FF69B4','#8B4513'];
   courierChart=new Chart(document.getElementById('chartCourierVolume'),{
     type:'bar',
-    data:{labels:[],datasets:[{data:[],backgroundColor:courierPalette,borderRadius:6,barThickness:28}]},
+    data:{labels:[],datasets:[{data:[],backgroundColor:courierPalette,borderRadius:6,barThickness:40}]},
+    // Top-8 — single-word courier names at 12px are perfectly readable with 0° rotation
     options:{
       responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmtCount(c.raw)+' shipments'}}},
       scales:{
-        x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0,autoSkip:false,font:{size:10},padding:2,callback:function(val,i){const lbl=this.getLabelForValue(val);if(!lbl)return'';const w=lbl.split(' ');return w.length>1?[w.slice(0,Math.ceil(w.length/2)).join(' '),w.slice(Math.ceil(w.length/2)).join(' ')]:lbl;}}},
+        x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0,autoSkip:false,font:{size:10},padding:4}},
         y:{grid:{color:LINE},ticks:{callback:v=>v>=1000?(v/1000)+'k':v}}
       }
     }
@@ -1114,10 +1161,13 @@ function initCharts(){
 
   skuChart=new Chart(document.getElementById('chartTopSkuRev'),{
     type:'bar',
-    data:{labels:[],datasets:[{data:[],backgroundColor:c=>{const v=c.raw;return v>10?ORANGE_DEEP:v>5?ORANGE:GOLD;},borderRadius:5,barThickness:16}]},
+    data:{labels:[],datasets:[{data:[],
+      backgroundColor:c=>PALETTE[c.dataIndex%PALETTE.length],
+      borderRadius:5,barThickness:16}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'₹'+parseFloat(c.raw).toFixed(2)+'L'}}},
-      scales:{x:{grid:{color:LINE}},y:{grid:{display:false},ticks:{font:{size:10.5}}}}}
+      layout:{padding:{bottom:18}},
+      scales:{x:{grid:{color:LINE},ticks:{callback:v=>fmtLakhAxis(v)}},y:{grid:{display:false},ticks:{font:{size:10.5}}}}}
   });
 
   catChart=new Chart(document.getElementById('chartCategoryRev'),{
@@ -1125,10 +1175,25 @@ function initCharts(){
     data:{labels:[],datasets:[{data:[],backgroundColor:c=>{
       const colors=[ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731','#20B2AA','#FF69B4'];
       return colors[c.dataIndex%colors.length];
-    },borderRadius:6,barThickness:22}]},
+    },borderRadius:6,barThickness:32}]},
+    // Top-8 — wrap long labels across 2 lines at 0° rotation for clean horizontal text
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'₹'+parseFloat(c.raw).toFixed(2)+'L'}}},
-      layout:{padding:{bottom:8}},scales:{x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0,autoSkip:false,font:{size:9},padding:4,callback:function(val,i){const lbl=this.getLabelForValue(val);if(!lbl)return'';const w=lbl.split(' ');return w.length>1?[w.slice(0,Math.ceil(w.length/2)).join(' '),w.slice(Math.ceil(w.length/2)).join(' ')]:lbl;}}},y:{grid:{color:LINE},ticks:{callback:v=>'₹'+(v>=1e7?(v/1e7).toFixed(1)+'Cr':v>=1e5?(v/1e5).toFixed(1)+'L':v>=1000?(v/1000).toFixed(0)+'k':v)}}}}
+      layout:{padding:{bottom:4}},
+      scales:{
+        x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0,autoSkip:false,font:{size:9},padding:3,
+          callback:function(val,i){
+            const lbl=this.getLabelForValue(val); if(!lbl) return '';
+            const words=lbl.split(' ');
+            if(words.length<=1) return lbl.length>12?lbl.slice(0,11)+'…':lbl;
+            const mid=Math.ceil(words.length/2);
+            const l1=words.slice(0,mid).join(' '), l2=words.slice(mid).join(' ');
+            return [l1, l2];
+          }
+        }},
+        y:{grid:{color:LINE},ticks:{callback:v=>fmtLakhAxis(v)}}
+      }
+    }
   });
 
   // tatChart removed — canvas replaced by chartTATAdherenceViz in viz tab
@@ -1188,22 +1253,38 @@ async function loadFilterOptions(){
     const unique=[...new Set(filtered.map(r=>r.city))].sort();
     unique.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
   }
+  // Marketplace groups — store with client so we can filter on client change
+  const allMktData = rows.map(r=>({mkt:r.marketplace_group,client:r.client_name})).filter(r=>r.mkt);
+  function populateMkts(selIds, filtered) {
+    const unique=[...new Set(filtered.map(r=>r.mkt))].sort();
+    selIds.forEach(id=>{
+      const sel=document.getElementById(id); if(!sel) return;
+      const cur=sel.value;
+      while(sel.options.length>1) sel.remove(1);
+      unique.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; sel.appendChild(o); });
+      if(unique.includes(cur)) sel.value=cur;
+    });
+  }
   clientSel.addEventListener('change',()=>{
     const sel=clientSel.value;
     const cities=sel==='All'?allCities:allCities.filter(r=>r.client===sel);
+    // Update all FC city dropdowns that depend on the selected client
     populateCities(citySel, cities);
+    const codFc=document.getElementById('cod-fc'); if(codFc) populateCities(codFc, cities);
+    const stFc=document.getElementById('stype-fc');  if(stFc)  populateCities(stFc,  cities);
+    const trendFcSel=document.getElementById('trend-fc'); if(trendFcSel) populateCities(trendFcSel, cities);
+    // Sync trend-client mini-slicer value (don't modify options, just change selection)
+    try {
+      const tCl=document.getElementById('trend-client');
+      if(tCl) tCl.value = (sel!=='All'&&[...tCl.options].some(o=>o.value===sel)) ? sel : 'All';
+    } catch(e){}
+    // Filter marketplace slicer to this client's marketplaces
+    const mkts=sel==='All'?allMktData:allMktData.filter(r=>r.client===sel);
+    populateMkts(['f-marketplace','trend-mkt'], mkts);
   });
   populateCities(citySel, allCities);
 
-  // Marketplace groups (from marketplace_group column)
-  const mkts=[...new Set(rows.map(r=>r.marketplace_group).filter(Boolean))].sort();
-  const allMktSelects=['f-marketplace','trend-mkt'];
-  mkts.forEach(m=>{
-    allMktSelects.map(id=>document.getElementById(id)).forEach(sel=>{
-      if(!sel) return;
-      const o=document.createElement('option'); o.value=m; o.textContent=m; sel.appendChild(o);
-    });
-  });
+  populateMkts(['f-marketplace','trend-mkt'], allMktData);
 
   // Populate mini-FC selects (trend-fc, cod-fc, stype-fc) with cities too
   const allMiniCitySelects=['trend-fc','cod-fc','stype-fc'];
@@ -1215,51 +1296,344 @@ async function loadFilterOptions(){
     });
   });
 
-  // Populate inventory page client/city selects
-  const invClientSel=document.getElementById('inv-client');
-  const invCitySel  =document.getElementById('inv-facility');
-  if(invClientSel){
-    clients.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; invClientSel.appendChild(o); });
-  }
-  if(invCitySel){
-    [...new Set(allCities.map(r=>r.city))].sort().forEach(c=>{
-      const o=document.createElement('option'); o.value=c; o.textContent=c; invCitySel.appendChild(o);
-    });
-  }
+  // ── Per-page client→city cascade: wrapped in try-catch so any error
+  // can't prevent inv/pta/grn selects from being populated ──────────────
+  try {
+    window._globalCities  = rows.map(r=>({city:r.facility_city, client:r.client_name})).filter(r=>r.city);
+    window._globalClients = clients;
 
-  // Update inv-facility label to "All Cities"
-  if(invCitySel && invCitySel.options[0]) invCitySel.options[0].textContent='All Cities';
+    // Populate inventory page client/city selects
+    const invClientSel=document.getElementById('inv-client');
+    const invCitySel  =document.getElementById('inv-facility');
+    if(invClientSel){
+      clients.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; invClientSel.appendChild(o); });
+      invClientSel.addEventListener('change', function(){
+        _filterCitySelect('inv-facility', this.value);
+      });
+    }
+    if(invCitySel){
+      [...new Set(window._globalCities.map(r=>r.city))].sort().forEach(c=>{
+        const o=document.createElement('option'); o.value=c; o.textContent=c; invCitySel.appendChild(o);
+      });
+      if(invCitySel.options[0]) invCitySel.options[0].textContent='All Cities';
+    }
+  } catch(e){ console.error('[loadFilterOptions] inv-client/facility error:', e); }
 
   // Populate Putaway and GRN section client/city dropdowns
-  const _cityList = [...new Set(allCities.map(r=>r.city))].sort();
-  ['pta-client','grn-client'].forEach(id=>{
-    const sel=document.getElementById(id); if(!sel) return;
-    clients.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
-  });
-  // Putaway daily trend mini-slicers
-  ['pta-daily-fc'].forEach(id=>{
-    const sel=document.getElementById(id); if(!sel) return;
-    _cityList.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
-  });
-  ['pta-daily-client'].forEach(id=>{
-    const sel=document.getElementById(id); if(!sel) return;
-    clients.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
-  });
+  try {
+    const _cityList = [...new Set((window._globalCities||[]).map(r=>r.city))].sort();
+    ['pta-client','grn-client'].forEach(id=>{
+      const sel=document.getElementById(id); if(!sel) return;
+      clients.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+      const cityId = id === 'pta-client' ? 'pta-facility' : 'grn-facility';
+      sel.addEventListener('change', function(){ _filterCitySelect(cityId, this.value); });
+    });
+    // Putaway daily trend mini-slicers
+    ['pta-daily-fc'].forEach(id=>{
+      const sel=document.getElementById(id); if(!sel) return;
+      _cityList.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+    });
+    ['pta-daily-client'].forEach(id=>{
+      const sel=document.getElementById(id); if(!sel) return;
+      clients.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+    });
+    // GRN trend mini-slicers
+    ['grn-trend-fc'].forEach(id=>{
+      const sel=document.getElementById(id); if(!sel) return;
+      _cityList.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+    });
+    ['grn-trend-client'].forEach(id=>{
+      const sel=document.getElementById(id); if(!sel) return;
+      clients.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+    });
+    ['pta-facility','grn-facility'].forEach(id=>{
+      const sel=document.getElementById(id); if(!sel) return;
+      _cityList.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+    });
+  } catch(e){ console.error('[loadFilterOptions] pta/grn error:', e); }
+} // end loadFilterOptions
 
-  // GRN trend mini-slicers
-  ['grn-trend-fc'].forEach(id=>{
-    const sel=document.getElementById(id); if(!sel) return;
-    _cityList.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
-  });
-  ['grn-trend-client'].forEach(id=>{
-    const sel=document.getElementById(id); if(!sel) return;
-    clients.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
-  });
+// ── Helper: filter a city <select> to only show cities for a given client ──
+// Called whenever a page-level client slicer changes.
+function _filterCitySelect(citySelId, client) {
+  const sel = document.getElementById(citySelId); if (!sel) return;
+  const cur = sel.value;
+  const gc = window._globalCities || [];
+  while (sel.options.length > 1) sel.remove(1);
+  const cities = client === 'All'
+    ? [...new Set(gc.map(r=>r.city))].sort()
+    : [...new Set(gc.filter(r=>r.client===client).map(r=>r.city))].sort();
+  cities.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+  if ([...sel.options].some(o=>o.value===cur)) sel.value=cur;
+}
 
-  ['pta-facility','grn-facility'].forEach(id=>{
-    const sel=document.getElementById(id); if(!sel) return;
-    _cityList.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+// ══════════════════════════════════════════════════════════════════════
+// ── Global axis + tooltip number formatters ──────────────────
+// No ₹ prefix for count/quantity; ₹ prefix for revenue.
+// fmtLakhAxis: for charts where values are already stored divided by 1L.
+function fmtNum(v) {
+  v = Math.abs(v||0);
+  if (v >= 1e7) return (v/1e7).toFixed(1).replace(/\.0$/,'') + 'Cr';
+  if (v >= 1e5) return (v/1e5).toFixed(1).replace(/\.0$/,'') + 'L';
+  if (v >= 1000) return Math.round(v/1000) + 'k';
+  return String(Math.round(v));
+}
+function fmtRevAxis(v) { return '₹' + fmtNum(v); }
+function fmtLakhAxis(v) { // values already in Lakhs (revenue/1L)
+  if (!v || v <= 0) return '0';
+  if (v >= 100) return '₹' + (v/100).toFixed(1).replace(/\.0$/,'') + 'Cr';
+  if (v >= 1)   return '₹' + (Number.isInteger(v) ? v : parseFloat(v.toFixed(1))) + 'L';
+  return '₹' + Math.round(v * 100) + 'k'; // 0.5L = ₹50k
+}
+
+// CHART-LEVEL METRIC SWITCHER — Revenue / Orders / Shipments / Quantity
+// Data is stored after the initial load so the dropdown can re-render
+// without a new API call. Each function re-sorts the stored data by the
+// selected metric (descending) AND updates labels + tooltip + y-axis.
+// ══════════════════════════════════════════════════════════════════════
+let _storedCatData=[], _storedSkuData=[], _storedClientData=[], _storedCourierData=[];
+
+// Shared palette for courier chart re-renders
+const _COURIER_PALETTE=['#FF6A32','#FFB238','#C9A842','#1D9A6C','#3E7CB1','#9B6BB5','#DD4B39','#4ECDC4','#F7B731','#20B2AA','#FF69B4','#8B4513'];
+
+// Metric tag labels
+const _METRIC_TAGS = { revenue:'Revenue', orders:'Orders', shipments:'Shipments', quantity:'Quantity' };
+
+function _setMetricTag(tagId, metric) {
+  const el = document.getElementById(tagId);
+  if (el) el.textContent = _METRIC_TAGS[metric] || metric;
+}
+
+function renderCatByMetric(metric) {
+  if (!_storedCatData.length) return;
+  // Re-sort by selected metric descending so top items change correctly
+  const sorted = [..._storedCatData].sort((a,b) => {
+    if (metric==='revenue')  return (parseFloat(b.revenue)||0)-(parseFloat(a.revenue)||0);
+    if (metric==='orders')   return (parseInt(b.orders)||0)-(parseInt(a.orders)||0);
+    if (metric==='quantity') return (parseInt(b.units)||0)-(parseInt(a.units)||0);
+    return (parseInt(b.orders)||0)-(parseInt(a.orders)||0); // shipments → proxy via orders
   });
+  const d = sorted.slice(0,8);
+  catChart.data.labels = d.map(r=>shortenLabel(r.category,14));
+  let vals, ttFn, yFn;
+  if (metric==='revenue') {
+    vals=d.map(r=>(parseFloat(r.revenue)||0)/100000);
+    ttFn=c=>'₹'+parseFloat(c.raw).toFixed(2)+'L';
+    yFn=v=>fmtLakhAxis(v);
+  } else if (metric==='orders') {
+    vals=d.map(r=>parseInt(r.orders)||0);
+    ttFn=c=>fmtCount(c.raw)+' orders';
+    yFn=v=>v>=1000?(v/1000).toFixed(0)+'k':v;
+  } else if (metric==='quantity') {
+    vals=d.map(r=>parseInt(r.units)||0);
+    ttFn=c=>fmtCount(c.raw)+' units';
+    yFn=v=>v>=1000?(v/1000).toFixed(0)+'k':v;
+  } else { // shipments — proxy via orders (category module has no shipment count)
+    vals=d.map(r=>parseInt(r.orders)||0);
+    ttFn=c=>fmtCount(c.raw)+' shipments (orders proxy)';
+    yFn=v=>v>=1000?(v/1000).toFixed(0)+'k':v;
+  }
+  catChart.data.datasets[0].data=vals;
+  catChart.options.plugins.tooltip.callbacks.label=ttFn;
+  catChart.options.scales.y.ticks.callback=yFn;
+  catChart.update();
+  _setMetricTag('cat-metric-tag',metric);
+}
+
+function renderSkuByMetric(metric) {
+  if (!_storedSkuData.length) return;
+  const sorted = [..._storedSkuData].sort((a,b) => {
+    if (metric==='revenue')   return (parseFloat(b.revenue)||0)-(parseFloat(a.revenue)||0);
+    if (metric==='orders')    return (parseInt(b.orders)||0)-(parseInt(a.orders)||0);
+    return (parseInt(b.units)||0)-(parseInt(a.units)||0);
+  });
+  skuChart.data.labels = sorted.map(r=>shortenLabel(r.sku||r.item_sku_code,26));
+  skuChart.data.datasets[0].backgroundColor = sorted.map((_,i)=>PALETTE[i%PALETTE.length]);
+  let vals, ttFn, xFn;
+  if (metric==='revenue') {
+    vals=sorted.map(r=>(parseFloat(r.revenue)||0)/100000);
+    ttFn=c=>'₹'+parseFloat(c.raw).toFixed(2)+'L';
+    xFn=v=>fmtLakhAxis(v);
+  } else if (metric==='orders') {
+    vals=sorted.map(r=>parseInt(r.orders)||0);
+    ttFn=c=>fmtCount(c.raw)+' orders';
+    xFn=v=>fmtNum(v);
+  } else if (metric==='shipments') {
+    vals=sorted.map(r=>parseInt(r.units)||0);
+    ttFn=c=>fmtCount(c.raw)+' units (shipments proxy)';
+    xFn=v=>fmtNum(v);
+  } else {
+    vals=sorted.map(r=>parseInt(r.units)||0);
+    ttFn=c=>fmtCount(c.raw)+' units';
+    xFn=v=>fmtNum(v);
+  }
+  skuChart.data.datasets[0].data=vals;
+  skuChart.options.plugins.tooltip.callbacks.label=ttFn;
+  if(skuChart.options.scales&&skuChart.options.scales.x)
+    skuChart.options.scales.x.ticks.callback=xFn;
+  skuChart.update();
+  _setMetricTag('sku-metric-tag',metric);
+}
+
+function renderClientByMetric(metric) {
+  if (!_storedClientData.length) return;
+  const sorted = [..._storedClientData].sort((a,b) => {
+    if (metric==='revenue')  return (parseFloat(b.revenue)||0)-(parseFloat(a.revenue)||0);
+    if (metric==='quantity') return (parseInt(b.units)||0)-(parseInt(a.units)||0);
+    return (parseInt(b.order_count)||0)-(parseInt(a.order_count)||0); // orders + shipments proxy
+  });
+  clientChart.data.labels = sorted.filter(r=>r.client_name).map(r=>r.client_name);
+  const validClientData = sorted.filter(r=>r.client_name);
+  let vals, ttFn;
+  if (metric==='revenue') {
+    vals=validClientData.map(r=>(parseFloat(r.revenue)||0)/100000);
+    ttFn=c=>'₹'+parseFloat(c.raw).toFixed(2)+'L';
+    if(clientChart.options.scales&&clientChart.options.scales.x)
+      clientChart.options.scales.x.ticks.callback=v=>fmtLakhAxis(v);
+  } else if (metric==='quantity') {
+    vals=validClientData.map(r=>parseInt(r.units)||0);
+    ttFn=c=>fmtCount(c.raw)+' units';
+    if(clientChart.options.scales&&clientChart.options.scales.x)
+      clientChart.options.scales.x.ticks.callback=v=>fmtNum(v);
+  } else {
+    vals=validClientData.map(r=>parseInt(r.order_count)||0);
+    ttFn=c=>fmtCount(c.raw)+(metric==='shipments'?' shipments (orders proxy)':' orders');
+    if(clientChart.options.scales&&clientChart.options.scales.x)
+      clientChart.options.scales.x.ticks.callback=v=>fmtNum(v);
+  }
+  clientChart.data.datasets[0].data=vals;
+  clientChart.options.plugins.tooltip.callbacks.label=ttFn;
+  clientChart.update();
+  _setMetricTag('client-metric-tag',metric);
+}
+
+function renderCourierByMetric(metric) {
+  if (!_storedCourierData.length) return;
+  const sorted = [..._storedCourierData].sort((a,b) => {
+    if (metric==='orders') return (parseInt(b.orders)||0)-(parseInt(a.orders)||0);
+    return (parseInt(b.shipments)||0)-(parseInt(a.shipments)||0); // revenue/qty → proxy via shipments
+  });
+  const d = sorted.slice(0,8);
+  courierChart.data.labels = d.map(r=>r.courier||'Unknown');
+  courierChart.data.datasets[0].backgroundColor = d.map((_,i)=>_COURIER_PALETTE[i%_COURIER_PALETTE.length]);
+  let vals, ttFn;
+  if (metric==='orders') {
+    vals=d.map(r=>parseInt(r.orders)||0);
+    ttFn=c=>fmtCount(c.raw)+' orders';
+  } else {
+    vals=d.map(r=>parseInt(r.shipments)||0);
+    ttFn=c=>fmtCount(c.raw)+(metric==='shipments'?' shipments':' shipments (proxy)');
+  }
+  courierChart.data.datasets[0].data=vals;
+  courierChart.options.plugins.tooltip.callbacks.label=ttFn;
+  courierChart.update();
+  _setMetricTag('courier-metric-tag',metric);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// MASTER TREND — Period selector & monthly/quarterly/MTD drill-down
+// Default = "By Month": full YTD, one data point per month.
+// MTD = daily data for current month.
+// Q1-Q4 = daily data for that quarter.
+// loadMasterTrend fetches independently — doesn't block other charts.
+// ══════════════════════════════════════════════════════════════════════
+const _MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function _fmtTrendLabel(dateStr, isMonthly) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d)) return dateStr;
+  const mon = _MONTHS_SHORT[d.getMonth()];
+  const yr  = String(d.getFullYear()).slice(2);
+  return isMonthly ? mon + "'" + yr : d.getDate() + ' ' + mon + "'" + yr;
+}
+
+function onTrendPeriodChange(period) { loadMasterTrend(period); }
+
+async function loadMasterTrend(period) {
+  showLoader('load-trend');
+  const istDateStr = new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Kolkata'});
+  const [y, m, d] = istDateStr.split('-').map(Number);
+  const yr = String(y);
+  const yesterday = new Date(Date.UTC(y, m-1, d > 1 ? d-1 : 1)).toISOString().split('T')[0];
+
+  let from, to;
+  if (period === 'mtd') {
+    from = document.getElementById('f-from')?.value || (yr+'-'+String(m).padStart(2,'0')+'-01');
+    to   = document.getElementById('f-to')?.value   || yesterday;
+  } else { // ytd + monthly + quarterly all use full YTD
+    from = yr+'-01-01'; to = yesterday;
+  }
+
+  // ytd: daily data Jan→yesterday (like BOUNCE dashboard style)
+  // monthly/quarterly: aggregated — handled below in rendering block
+
+  const extra = { dateFrom: from, dateTo: to };
+  // Master Trend now follows top global slicers (fc, client, marketplace)
+  const fc = document.getElementById('f-facility')?.value;
+  const cl = document.getElementById('f-client')?.value;
+  const mk = document.getElementById('f-marketplace')?.value;
+  if (fc && fc !== 'All') extra.city = fc;
+  if (cl && cl !== 'All') extra.client = cl;
+  if (mk && mk !== 'All') extra.marketplace = mk;
+
+  const trend = await fetchData('sale_orders_trend', extra);
+  if (!trend || !trend.length) { hideLoader('load-trend'); return; }
+
+  let labels, chartData;
+
+  if (period === 'monthly') {
+    const monthly = {};
+    trend.forEach(r => {
+      const mo = (r.date || '').substring(0, 7); if (!mo) return;
+      if (!monthly[mo]) monthly[mo] = { date:mo+'-01', orders:0, shipments:0, revenue:0, quantity:0 };
+      monthly[mo].orders    += parseInt(r.orders)||0;
+      monthly[mo].shipments += parseInt(r.shipments)||0;
+      monthly[mo].revenue   += parseFloat(r.revenue)||0;
+      monthly[mo].quantity  += parseInt(r.quantity)||0;
+    });
+    const keys = Object.keys(monthly).sort();
+    labels    = keys.map(k => _fmtTrendLabel(k+'-01', true));
+    chartData = keys.map(k => monthly[k]);
+
+  } else if (period === 'quarterly') {
+    const quarterly = {};
+    trend.forEach(r => {
+      if (!r.date) return;
+      const mo = new Date(r.date+'T00:00:00').getMonth();
+      const qKey = "Q"+(Math.floor(mo/3)+1)+"'"+yr.slice(2);
+      if (!quarterly[qKey]) quarterly[qKey] = { date:r.date, orders:0, shipments:0, revenue:0, quantity:0 };
+      quarterly[qKey].orders    += parseInt(r.orders)||0;
+      quarterly[qKey].shipments += parseInt(r.shipments)||0;
+      quarterly[qKey].revenue   += parseFloat(r.revenue)||0;
+      quarterly[qKey].quantity  += parseInt(r.quantity)||0;
+    });
+    const qOrder = ["Q1'"+yr.slice(2),"Q2'"+yr.slice(2),"Q3'"+yr.slice(2),"Q4'"+yr.slice(2)];
+    labels    = qOrder.filter(k => quarterly[k]);
+    chartData = labels.map(k => quarterly[k]);
+
+  } else { // ytd + mtd — daily with formatted labels
+    // For 'ytd': inject Jan 1 anchor so x-axis clearly starts Jan 1 even for sparse clients.
+    // Uses displayTrend (new variable) — trend is const and cannot be reassigned.
+    let displayTrend = trend;
+    if (period === 'ytd') {
+      const jan1 = yr + '-01-01';
+      if (!trend.some(r => r.date === jan1)) {
+        displayTrend = [{ date: jan1, orders: 0, shipments: 0, revenue: 0, quantity: 0 }, ...trend];
+      }
+      // Note: do NOT set maxTicksLimit here — modifying chart options mid-render breaks the chart.
+    }
+    labels    = displayTrend.map(r => _fmtTrendLabel(r.date||'', false));
+    chartData = displayTrend;
+  }
+
+  masterChart.data.labels = labels;
+  const ds = buildMasterDatasets(chartData);
+  ds.forEach((dataset, i) => { masterChart.data.datasets[i] = dataset; });
+  const showY1 = METRIC_CONFIGS.some((cfg,i) => cfg.yAxis === 'y1' && activeMetrics.has(i));
+  masterChart.options.scales.y1.display = showY1;
+  masterChart.update();
+  hideLoader('load-trend');
 }
 
 // ---- MAIN LOAD FUNCTION ----
@@ -1269,8 +1643,8 @@ async function loadSaleOrders(){
   ['kpi-total-orders','kpi-total-units','kpi-revenue','kpi-shipments','kpi-fulfillment','kpi-cancellation',
    'kpi-aov','kpi-discount','kpi-tax'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent='—'; });
 
-  const [kpi,trend,cod,stype,byClient,byCourier,topSkus,byCat,tat,tatDist,courierSla]=await Promise.all([
-    fetchData('sale_orders_kpi'), fetchData('sale_orders_trend'),
+  const [kpi,cod,stype,byClient,byCourier,topSkus,byCat,tat,tatDist,courierSla]=await Promise.all([
+    fetchData('sale_orders_kpi'),
     fetchData('sale_orders_cod_prepaid'), fetchData('sale_orders_shipment_type'),
     fetchData('sale_orders_by_client'), fetchData('sale_orders_by_courier'),
     fetchData('sale_orders_top_skus'), fetchData('sale_orders_by_category'),
@@ -1278,6 +1652,19 @@ async function loadSaleOrders(){
   ]);
 
   const from=document.getElementById('f-from').value, to=document.getElementById('f-to').value;
+  // Store raw data for metric-selector re-renders (no extra API call needed)
+  _storedCatData    = byCat     || [];
+  _storedSkuData    = topSkus   || [];
+  _storedClientData = byClient  || [];
+  _storedCourierData= byCourier || [];
+  // Reset selectors to their defaults on each full load
+  ['sku-metric-sel','cat-metric-sel','client-metric-sel','courier-metric-sel'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.selectedIndex=0;
+  });
+  _setMetricTag('sku-metric-tag','revenue');
+  _setMetricTag('cat-metric-tag','revenue');
+  _setMetricTag('client-metric-tag','orders');
+  _setMetricTag('courier-metric-tag','shipments');
   const fmt=d=>{ const p=d.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; };
   document.getElementById('so-date-chip').textContent=`📅 ${fmt(from)} – ${fmt(to)}`;
 
@@ -1297,13 +1684,10 @@ async function loadSaleOrders(){
     fEl.style.backgroundImage=parseFloat(kpi.fulfillment_rate)>=90?'linear-gradient(135deg,#166534,#15803D)':'linear-gradient(135deg,#991B1B,#DC2626)';
   }
 
-  if(trend && trend.length){
-    masterChart.data.labels=trend.map(r=>r.date);
-    const ds=buildMasterDatasets(trend);
-    ds.forEach((d,i)=>{ masterChart.data.datasets[i]=d; });
-    masterChart.update();
-  }
-  hideLoader('load-trend');
+  // Trend chart handled separately — monthly view by default, period selector switches mode
+  // Preserve current period — never reset user's period selection on Apply
+  const currentPeriod = document.getElementById('trend-period-sel')?.value || 'ytd';
+  loadMasterTrend(currentPeriod);
 
   if(cod && cod.length){
     const codN=parseInt(cod.find(r=>r.payment_mode==='COD')?.order_count)||0;
@@ -1337,10 +1721,10 @@ async function loadSaleOrders(){
 
   if(byCourier && byCourier.length){
     const courierPalette=['#FF6A32','#FFB238','#C9A842','#1D9A6C','#3E7CB1','#9B6BB5','#DD4B39','#4ECDC4','#F7B731','#20B2AA','#FF69B4','#8B4513'];
-    const top10Courier=byCourier.slice(0,10);
-    courierChart.data.labels=top10Courier.map(r=>r.courier||'Unknown');
-    courierChart.data.datasets[0].data=top10Courier.map(r=>parseInt(r.shipments)||0);
-    courierChart.data.datasets[0].backgroundColor=top10Courier.map((_,i)=>courierPalette[i%courierPalette.length]);
+    const top8Courier=byCourier.slice(0,8);
+    courierChart.data.labels=top8Courier.map(r=>r.courier||'Unknown');
+    courierChart.data.datasets[0].data=top8Courier.map(r=>parseInt(r.shipments)||0);
+    courierChart.data.datasets[0].backgroundColor=top8Courier.map((_,i)=>courierPalette[i%courierPalette.length]);
     courierChart.update();
   }
   hideLoader('load-courier');
@@ -1353,9 +1737,9 @@ async function loadSaleOrders(){
   hideLoader('load-sku');
 
   if(byCat && byCat.length){
-    const top10Cat=byCat.slice(0,10);
-    catChart.data.labels=top10Cat.map(r=>shortenLabel(r.category,18));
-    catChart.data.datasets[0].data=top10Cat.map(r=>(parseFloat(r.revenue)||0)/100000);
+    const top8Cat=byCat.slice(0,8);
+    catChart.data.labels=top8Cat.map(r=>shortenLabel(r.category,14));
+    catChart.data.datasets[0].data=top8Cat.map(r=>(parseFloat(r.revenue)||0)/100000);
     catChart.update();
   }
   hideLoader('load-cat');
@@ -1476,7 +1860,13 @@ function initInventoryCharts() {
     type: 'line',
     data: { labels:[], datasets:[{ label:'Good Stock', data:[], borderColor:GREEN, backgroundColor:'rgba(29,154,108,.1)', fill:true, tension:.4, borderWidth:2.5, pointRadius:0 }] },
     options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
-      scales:{ x:{ grid:{ display:false }, ticks:{ maxTicksLimit:8 } }, y:{ grid:{ color:LINE } } } }
+      scales:{ x:{ grid:{ display:false }, ticks:{ maxTicksLimit:8,
+        callback: function(val,i) {
+          const lbl = this.getLabelForValue(val); if(!lbl) return '';
+          const d = new Date(lbl+'T00:00:00'); if(isNaN(d)) return lbl;
+          return d.getDate()+' '+_MONTHS_SHORT[d.getMonth()]+"'"+String(d.getFullYear()).slice(2);
+        }
+      }}, y:{ grid:{ color:LINE } } } }
   });
   const hBar = { indexAxis:'y', responsive:true, maintainAspectRatio:false,
     plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label: c => fmtCount(c.raw)+' units' } } },
@@ -1484,16 +1874,26 @@ function initInventoryCharts() {
   };
   // PALETTE is now a global constant
   invClientChart = new Chart(document.getElementById('chartInvClient'), {
-    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: PALETTE, borderRadius:6, barPercentage:0.6, categoryPercentage:0.7 }] }, options: hBar
+    type:'bar',
+    data:{ labels:[], datasets:[{ data:[], backgroundColor: PALETTE, borderRadius:5, barThickness:20 }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>fmtCount(c.raw)+' units'}} },
+      scales:{
+        x:{ grid:{color:LINE}, ticks:{callback:v=>v>=1e5?(v/1e5).toFixed(1)+'L':v>=1000?Math.round(v/1000)+'k':v} },
+        y:{ grid:{display:false}, ticks:{font:{size:11}} }
+      }
+    }
   });
   invFacilityChart = new Chart(document.getElementById('chartInvFacility'), {
-    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:5, barThickness:16, barPercentage:0.7, categoryPercentage:0.6 }] }, options: hBar
+    type:'bar',
+    data:{ labels:[], datasets:[{ data:[], backgroundColor: PALETTE, borderRadius:5, barThickness:16 }] },
+    options:{ ...hBar, layout:{padding:{bottom:0}} }
   });
   invCatChart = new Chart(document.getElementById('chartInvCategory'), {
     type:'bar',
-    data:{ labels:[], datasets:[{ data:[], backgroundColor: c => palette[c.dataIndex % palette.length], borderRadius:5, barThickness:22 }] },
+    data:{ labels:[], datasets:[{ data:[], backgroundColor: c => PALETTE[c.dataIndex % PALETTE.length], borderRadius:5, barThickness:22 }] },
     options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
-      scales:{ x:{ grid:{ display:false }, ticks:{ maxRotation:0, font:{ size:10.5 } } }, y:{ grid:{ color:LINE }, ticks:{ callback: v => v>=1000?(v/1000)+'k':v } } } }
+      scales:{ x:{ grid:{ display:false }, ticks:{ maxRotation:0, font:{ size:10.5 } } }, y:{ grid:{ color:LINE }, ticks:{ callback: v => v>=1e7?(v/1e7).toFixed(1)+'Cr':v>=1e5?(v/1e5).toFixed(1)+'L':v>=1000?Math.round(v/1000)+'k':v } } } }
   });
 }
 
@@ -1519,15 +1919,19 @@ async function loadInventory() {
   const mtdStart = todayStr.substring(0,8)+'01'; // first of current month
   const trendParams = {...params, dateFrom: mtdStart, dateTo: todayStr};
 
+  // Expiry-at-Risk + Dead Stock always use latest snapshot regardless of user date filter.
+  // invWhere defaults to MAX(snapshot_date) when no snapshotDate is passed.
+  const todayInvParams = { client: f.client, city: f.city };
+
   const [kpi, byType, trend, byClient, byFacility, byCat, expiry, dead] = await Promise.all([
-    fetchData('inventory_kpi', params, true),
-    fetchData('inventory_by_type', params, true),
-    fetchData('inventory_trend', trendParams, true),
-    fetchData('inventory_by_client', params, true),
-    fetchData('inventory_by_facility', params, true),
-    fetchData('inventory_by_category', params, true),
-    fetchData('inventory_expiry_risk', params, true),
-    fetchData('inventory_dead_stock', params, true),
+    fetchData('inventory_kpi', params, false),
+    fetchData('inventory_by_type', params, false),
+    fetchData('inventory_trend', trendParams, false),
+    fetchData('inventory_by_client', params, false),
+    fetchData('inventory_by_facility', params, false),
+    fetchData('inventory_by_category', params, false),
+    fetchData('inventory_expiry_risk', todayInvParams, false),
+    fetchData('inventory_dead_stock', todayInvParams, false),
   ]);
 
   if (kpi) {
@@ -1554,6 +1958,10 @@ async function loadInventory() {
     document.getElementById('inv-lv-good').textContent    = fmtCount(good);
     document.getElementById('inv-lv-blocked').textContent = fmtCount(blocked);
     document.getElementById('inv-lv-damaged').textContent = fmtCount(damaged);
+    // Override the KPI box — quantity_damaged column is 0 in UC exports;
+    // actual QC Rejected / Bad comes from inventory_type rows via byType module.
+    document.getElementById('inv-kpi-damaged').textContent = fmtCount(damaged);
+    if (t > 0) document.getElementById('inv-kpi-damaged-pct').textContent = fmtPct(damaged/t*100)+' of total';
   }
 
   if (trend && trend.length) {
@@ -1565,10 +1973,10 @@ async function loadInventory() {
 
   // PALETTE is now a global constant
   if (byClient && byClient.length) {
-    const validInvClients=byClient.filter(r=>r.client_name&&r.client_name.trim()!=='');
-    invClientChart.data.labels = validInvClients.map(r=>r.client_name);
-    invClientChart.data.datasets[0].data = validInvClients.map(r=>parseFloat(r.good_qty)||0);
-    invClientChart.data.datasets[0].backgroundColor = byClient.map((_,i)=>palette[i%palette.length]);
+    const top8InvClients=byClient.filter(r=>r.client_name&&r.client_name.trim()!=='').slice(0,8);
+    invClientChart.data.labels = top8InvClients.map(r=>r.client_name);
+    invClientChart.data.datasets[0].data = top8InvClients.map(r=>parseFloat(r.good_qty)||0);
+    invClientChart.data.datasets[0].backgroundColor = top8InvClients.map((_,i)=>PALETTE[i%PALETTE.length]);
     invClientChart.update();
   }
   hideLoader('load-inv-client');
@@ -1577,7 +1985,7 @@ async function loadInventory() {
     const top10InvFac=byFacility.filter(r=>r.facility_code&&r.facility_code.trim()!=='').slice(0,10);
     invFacilityChart.data.labels = top10InvFac.map(r=>r.facility_code);
     invFacilityChart.data.datasets[0].data = top10InvFac.map(r=>parseFloat(r.good_qty)||0);
-    invFacilityChart.data.datasets[0].backgroundColor = byFacility.map((_,i)=>palette[i%palette.length]);
+    invFacilityChart.data.datasets[0].backgroundColor = byFacility.map((_,i)=>PALETTE[i%PALETTE.length]);
     invFacilityChart.update();
   }
   hideLoader('load-inv-facility');
@@ -1589,24 +1997,42 @@ async function loadInventory() {
   }
   hideLoader('load-inv-cat');
 
-  // Expiry risk slabs
+  // Aggregate expiry/dead items by client + facility (not per-SKU)
+  function _aggByClientFc(items) {
+    const agg = {};
+    (items||[]).forEach(r => {
+      // Use city (facility_city) — cleaner than raw facility code
+      const city = r.facility_city || r.facility_code || 'Unknown';
+      const key = (r.client_name||'Unknown')+'|'+city;
+      if (!agg[key]) agg[key] = { client_name:r.client_name||'Unknown', city:city, total_units:0 };
+      agg[key].total_units += parseInt(r.quantity)||0;
+    });
+    return Object.values(agg).sort((a,b)=>b.total_units-a.total_units);
+  }
+
+  // Expiry risk slabs — grouped by client + FC
   ['30','60','90'].forEach(slab => {
     const el = document.getElementById('inv-exp-'+slab);
-    const items = (expiry||[]).filter(r => {
+    const slabItems = (expiry||[]).filter(r => {
       const d = parseInt(r.days_to_expiry)||0;
       if (slab==='30') return d>=0 && d<30;
       if (slab==='60') return d>=30 && d<60;
       return d>=60 && d<90;
     });
-    if (!items.length) { el.innerHTML='<span class="slab-empty">✓ No items in this range</span>'; return; }
-    el.innerHTML='<div class="slab-items">'+items.slice(0,12).map(r=>`<div class="slab-item">${shortenLabel(r.item_sku_code,20)} · ${fmtCount(r.quantity)} units · ${r.facility_code}</div>`).join('')+(items.length>12?`<div class="slab-item">+${items.length-12} more</div>`:'')+' </div>';
+    const grouped = _aggByClientFc(slabItems);
+    if (!grouped.length) { el.innerHTML='<span class="slab-empty">✓ No items in this range</span>'; return; }
+    el.innerHTML='<div class="slab-items">'+
+      grouped.map(r=>`<div class="slab-item">${r.client_name} · ${r.city} · ${fmtCount(r.total_units)} units</div>`).join('')+
+      '</div>';
   });
 
-  // Dead stock table
+  // Dead stock — grouped by client + FC
   const deadEl = document.getElementById('inv-dead-table');
-  if (!dead || !dead.length) { deadEl.innerHTML='<div style="text-align:center;color:var(--green);padding:30px;font-size:13px;font-weight:700;">✓ No dead stock detected</div>'; }
-  else {
-    deadEl.innerHTML = dead.map(r=>`<div class="dead-row"><div><div class="dead-sku">${shortenLabel(r.item_sku_code,28)}</div><div class="dead-fc">${r.facility_code}</div></div><div class="dead-qty">${fmtCount(r.quantity)}</div><div style="font-size:10px;color:var(--red);font-weight:700;">0 orders</div></div>`).join('');
+  const deadGrouped = _aggByClientFc(dead);
+  if (!deadGrouped.length) {
+    deadEl.innerHTML='<div style="text-align:center;color:var(--green);padding:30px;font-size:13px;font-weight:700;">✓ No dead stock detected</div>';
+  } else {
+    deadEl.innerHTML = deadGrouped.map(r=>`<div class="dead-row"><div><div class="dead-sku">${r.client_name}</div><div class="dead-fc">${r.city}</div></div><div class="dead-qty">${fmtCount(r.total_units)} <span style="font-size:10px;color:var(--ink-soft);font-weight:600;">units</span></div></div>`).join('');
   }
 }
 
@@ -1621,7 +2047,12 @@ async function exportInvViz(key) {
     inv_dead:     { module:'inventory_dead_stock',   file:'inventory_dead_stock.csv' },
   };
   const cfg = map[key]; if(!cfg) return;
-  const rows = await fetchData(cfg.module, getInvFilters());
+  // Expiry + Dead Stock always export today's latest snapshot with full per-SKU detail
+  const f = getInvFilters();
+  const params = (key === 'inv_expiry' || key === 'inv_dead')
+    ? { client: f.client, city: f.city }   // no snapshotDate → always MAX(snapshot_date)
+    : f;
+  const rows = await fetchData(cfg.module, params, true);
   if (rows) downloadCsv(jsonToCsv(rows), cfg.file);
 }
 
@@ -1676,10 +2107,10 @@ function initPutawayCharts() {
   };
   // PALETTE is now a global constant
   ptaFacilityChart = new Chart(document.getElementById('chartPtaFacility'), {
-    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'], borderRadius:6, barPercentage:0.7, categoryPercentage:0.78 }] }, options: hBar
+    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'], borderRadius:6, barPercentage:0.8, categoryPercentage:0.85 }] }, options: hBar
   });
   ptaClientChart = new Chart(document.getElementById('chartPtaClient'), {
-    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'], borderRadius:6, barPercentage:0.7, categoryPercentage:0.78 }] }, options: hBar
+    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'], borderRadius:6, barPercentage:0.8, categoryPercentage:0.85 }] }, options: hBar
   });
 }
 
@@ -1696,6 +2127,40 @@ function buildDynLegend(containerId, labels, values, colors) {
   el.innerHTML = labels.map((l,i) => `<div class="dyn-legend-row"><div class="dyn-dot" style="background:${colors[i%colors.length]}"></div><span class="dyn-label">${l}</span><span class="dyn-val">${fmtCount(values[i])}</span></div>`).join('');
 }
 
+// ── Putaway Status Breakdown — Document / Quantity toggle + Type filter ─────
+let _ptaStatusData = null;
+let _ptaStatusView = 'doc'; // 'doc' = count, 'qty' = putaway_quantity
+
+function setPtaStatusView(view) {
+  _ptaStatusView = view;
+  document.getElementById('pta-doc-btn')?.classList.toggle('active', view === 'doc');
+  document.getElementById('pta-qty-btn')?.classList.toggle('active', view === 'qty');
+  renderPtaStatus(_ptaStatusData);
+}
+
+function renderPtaStatus(byStatus) {
+  if (!byStatus || !byStatus.length) return;
+  _ptaStatusData = byStatus;
+  const statusColors = { 'COMPLETE':GREEN, 'PENDING':AMBER, 'CREATED':BLUE, 'REJECTED':RED };
+  const isQty = _ptaStatusView === 'qty';
+  const vals  = byStatus.map(r => isQty ? parseInt(r.total_qty)||0 : parseInt(r.total_items)||0);
+  const lbls  = byStatus.map(r => r.status_code||'Unknown');
+  const cols  = byStatus.map(r => statusColors[r.status_code]||GOLD);
+  ptaStatusChart.data.labels                    = lbls;
+  ptaStatusChart.data.datasets[0].data          = vals;
+  ptaStatusChart.data.datasets[0].backgroundColor = cols;
+  ptaStatusChart.update();
+  buildDynLegend('pta-status-legend', lbls, vals, cols);
+}
+
+async function reloadPtaStatus() {
+  const f = getPtaFilters();
+  const pt = document.getElementById('pta-status-type')?.value;
+  if (pt && pt !== 'All') f.putawayType = pt;
+  const byStatus = await fetchData('putaway_by_status', f, false);
+  renderPtaStatus(byStatus);
+}
+
 async function loadPutaway() {
   ['load-pta-daily','load-pta-fc','load-pta-client'].forEach(showLoader);
   ['pta-kpi-batches','pta-kpi-units','pta-kpi-completion','pta-kpi-pending','pta-kpi-rejection'].forEach(id => {
@@ -1704,13 +2169,13 @@ async function loadPutaway() {
 
   const f = getPtaFilters();
   const [kpi, byType, byStatus, daily, byFacility, byClient, rejReasons] = await Promise.all([
-    fetchData('putaway_kpi', f, true),
-    fetchData('putaway_by_type', f, true),
-    fetchData('putaway_by_status', f, true),
-    fetchData('putaway_daily_trend', f, true),
-    fetchData('putaway_by_facility', f, true),
-    fetchData('putaway_by_client', f, true),
-    fetchData('putaway_rejection_reasons', f, true),
+    fetchData('putaway_kpi', f, false),
+    fetchData('putaway_by_type', f, false),
+    fetchData('putaway_by_status', f, false),
+    fetchData('putaway_daily_trend', f, false),
+    fetchData('putaway_by_facility', f, false),
+    fetchData('putaway_by_client', f, false),
+    fetchData('putaway_rejection_reasons', f, false),
   ]);
 
   if (kpi) {
@@ -1728,16 +2193,24 @@ async function loadPutaway() {
     ptaTypeChart.data.datasets[0].backgroundColor = byType.map((_,i)=>typePalette[i%typePalette.length]);
     ptaTypeChart.update();
     buildDynLegend('pta-type-legend', byType.map(r=>r.type||'Unknown'), byType.map(r=>parseInt(r.total_items)||0), typePalette);
+    // Populate the type slicer from real data
+    const typeSel = document.getElementById('pta-status-type');
+    if (typeSel) {
+      const prev = typeSel.value;
+      typeSel.innerHTML = '<option value="All">All Types</option>' +
+        byType.map(r=>{
+          const t=r.type||''; const label=t.replace(/^PUTAWAY_/i,'');
+          return `<option value="${t}">${label||'Unknown'}</option>`;
+        }).join('');
+      typeSel.value = prev || 'All';
+    }
   }
 
-  const statusColors = { 'COMPLETE':GREEN, 'PENDING':AMBER, 'CREATED':BLUE, 'REJECTED':RED };
-  if (byStatus && byStatus.length) {
-    ptaStatusChart.data.labels = byStatus.map(r=>r.status_code||'Unknown');
-    ptaStatusChart.data.datasets[0].data = byStatus.map(r=>parseInt(r.total_items)||0);
-    ptaStatusChart.data.datasets[0].backgroundColor = byStatus.map(r=>statusColors[r.status_code]||GOLD);
-    ptaStatusChart.update();
-    buildDynLegend('pta-status-legend', byStatus.map(r=>r.status_code||'Unknown'), byStatus.map(r=>parseInt(r.total_items)||0), byStatus.map(r=>statusColors[r.status_code]||GOLD));
-  }
+  // Status Breakdown — uses renderPtaStatus so pills toggle without re-fetch
+  _ptaStatusView = 'doc'; // reset to Document on full reload
+  document.getElementById('pta-doc-btn')?.classList.add('active');
+  document.getElementById('pta-qty-btn')?.classList.remove('active');
+  renderPtaStatus(byStatus);
 
   if (daily && daily.length) {
     ptaDailyChart.data.labels = daily.map(r=>r.date);
@@ -1797,7 +2270,7 @@ async function reloadPtaDaily() {
     client: document.getElementById('pta-daily-client')?.value || 'All',
   };
   const merged = {...base, ...extra};
-  const daily = await fetchData('putaway_daily_trend', merged, true);
+  const daily = await fetchData('putaway_daily_trend', merged, false);
   if(daily && daily.length){
     ptaDailyChart.data.labels = daily.map(r=>r.date);
     ptaDailyChart.data.datasets[0].data = daily.map(r=>parseInt(r.total_qty)||0);
@@ -1828,7 +2301,7 @@ function initGRNCharts() {
     data:{ labels:[], datasets:[
       {
         type:'bar', label:'Units Received', data:[],
-        backgroundColor:'rgba(255,106,50,0.72)', borderColor:ORANGE,
+        backgroundColor:ORANGE, borderColor:ORANGE,
         borderRadius:4, barPercentage:0.7, categoryPercentage:0.8, yAxisID:'y1'
       },
       {
@@ -1841,7 +2314,7 @@ function initGRNCharts() {
     options:{ responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false },
       plugins:{ legend:{ position:'top', align:'end', labels:{ usePointStyle:true, pointStyle:'circle', boxWidth:8, padding:14, font:{size:11,weight:'600'} } } },
       animation:{ duration:1200, easing:'easeOutQuart', delay: ctx => ctx.dataIndex*20 },
-      scales:{ x:{ grid:{ display:false }, ticks:{ maxTicksLimit:16, font:{size:10} } },
+      scales:{ x:{ grid:{ display:false }, ticks:{ maxRotation:0, minRotation:0, autoSkip:false, font:{size:8.5}, callback:function(val,i){const lbl=this.getLabelForValue(val);if(!lbl)return'';const d=new Date(lbl+'T00:00:00');const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return[d.getDate(),mo[d.getMonth()]+"'"+String(d.getFullYear()).slice(2)];} } },
                y:{ grid:{ color:LINE }, position:'left', title:{display:true,text:'GRN Count',font:{size:10}} },
                y1:{ grid:{ display:false }, position:'right', title:{display:true,text:'Units',font:{size:10}}, ticks:{callback:v=>v>=100000?(v/100000).toFixed(1)+'L':v>=1000?Math.round(v/1000)+'k':v} } } }
   });
@@ -1853,38 +2326,56 @@ function initGRNCharts() {
   // PALETTE is now a global constant
 
   grnVendorVolChart = new Chart(document.getElementById('chartGRNVendorVol'), {
-    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:6, barPercentage:0.7, categoryPercentage:0.78 }] },
+    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: PALETTE, borderRadius:6, barThickness:22 }] },
     options:{ ...hBar, plugins:{ ...hBar.plugins, tooltip:{ callbacks:{ label: c=>fmtCount(c.raw)+' units' } } } }
   });
 
   // Top Vendors by GRN Count chart
-  window.grnVendorCountChart = new Chart(document.getElementById('chartGRNVendorCount'), {
+  const _gvcEl = document.getElementById('chartGRNVendorCount');
+  if(_gvcEl) { window.grnVendorCountChart = new Chart(_gvcEl, {
     type:'bar',
-    data:{ labels:[], datasets:[{ data:[], backgroundColor: [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'], borderRadius:6, barPercentage:0.7, categoryPercentage:0.78 }] },
+    data:{ labels:[], datasets:[{ data:[], backgroundColor: [ORANGE,'#E8823C',AMBER,GOLD,GREEN,BLUE,'#9B6BB5',RED,'#4ECDC4','#F7B731'], borderRadius:6, barThickness:22 }] },
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>fmtCount(c.raw)+' GRNs'}} },
       scales:{ x:{grid:{color:LINE}, ticks:{callback:v=>v>=1000?Math.round(v/1000)+'k':v}}, y:{grid:{display:false}, ticks:{font:{size:11}}} } }
-  });
+  }); }
 
   const _gvrEl = document.getElementById('chartGRNVendorRej');
-  if(_gvrEl) grnVendorRejChart = new Chart(_gvrEl, {
+  if(_gvrEl) { grnVendorRejChart = new Chart(_gvrEl, {
     type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: c=>{ const v=parseFloat(c.raw); return v>10?RED:v>5?ORANGE:AMBER; }, borderRadius:5, barThickness:18 }] },
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label: c=>fmtPct(c.raw) } } },
       scales:{ x:{ grid:{ color:LINE }, max:100 }, y:{ grid:{ display:false }, ticks:{ font:{ size:11 } } } } }
-  });
-  }
+  }); }
 
+  // Client-wise Inbound — vertical bar, top 8, horizontal clean labels
   grnClientChart = new Chart(document.getElementById('chartGRNClient'), {
-    type:'bar', data:{ labels:[], datasets:[{ data:[], backgroundColor: palette, borderRadius:5, barPercentage:0.6, categoryPercentage:0.7 }] },
-    options:{ ...hBar, plugins:{ ...hBar.plugins, tooltip:{ callbacks:{ label: c=>fmtCount(c.raw)+' units' } } } }
+    type:'bar',
+    data:{ labels:[], datasets:[{ data:[], backgroundColor: PALETTE, borderRadius:5, barThickness:28 }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>fmtCount(c.raw)+' units'}} },
+      layout:{padding:{bottom:10}},
+      scales:{
+        x:{ grid:{display:false}, ticks:{maxRotation:0, font:{size:9.5},
+          callback:function(val,i){const lbl=this.getLabelForValue(val);if(!lbl)return'';const w=lbl.split(' ');if(w.length<=1)return lbl.length>10?lbl.slice(0,9)+'…':lbl;const mid=Math.ceil(w.length/2);return[w.slice(0,mid).join(' '),w.slice(mid).join(' ')];}} },
+        y:{ grid:{color:LINE}, ticks:{callback:v=>v>=1e5?(v/1e5).toFixed(1)+'L':v>=1000?Math.round(v/1000)+'k':v} }
+      }
+    }
   });
 
+  // Category-wise Inbound — vertical bar, top 8, same layout as client for x-axis alignment
   grnCatChart = new Chart(document.getElementById('chartGRNCategory'), {
     type:'bar',
-    data:{ labels:[], datasets:[{ data:[], backgroundColor: c=>PALETTE[c.dataIndex%PALETTE.length], borderRadius:5, barThickness:22 }] },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
-      scales:{ x:{ grid:{ display:false }, ticks:{ maxRotation:0, font:{ size:10.5 } } }, y:{ grid:{ color:LINE } } } }
+    data:{ labels:[], datasets:[{ data:[], backgroundColor: c=>PALETTE[c.dataIndex%PALETTE.length], borderRadius:5, barThickness:28 }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>fmtCount(c.raw)+' units'}} },
+      layout:{padding:{bottom:10}},
+      scales:{
+        x:{ grid:{display:false}, ticks:{maxRotation:0, font:{size:9.5},
+          callback:function(val,i){const lbl=this.getLabelForValue(val);if(!lbl)return'';const w=lbl.split(' ');if(w.length<=1)return lbl.length>10?lbl.slice(0,9)+'…':lbl;const mid=Math.ceil(w.length/2);return[w.slice(0,mid).join(' '),w.slice(mid).join(' ')];}} },
+        y:{ grid:{color:LINE}, ticks:{callback:v=>v>=1e5?(v/1e5).toFixed(1)+'L':v>=1000?Math.round(v/1000)+'k':v} }
+      }
+    }
   });
 
   grnRejChart = new Chart(document.getElementById('chartGRNRejection'), {
@@ -1892,6 +2383,7 @@ function initGRNCharts() {
     data:{ labels:[], datasets:[{ data:[], backgroundColor:[RED,AMBER,ORANGE,GOLD,BLUE,'#9B6BB5'], borderWidth:0, cutout:'68%', hoverOffset:6 }] },
     options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } } }
   });
+}
 
 function getGRNFilters() {
   return { client: document.getElementById('grn-client').value,
@@ -1911,15 +2403,15 @@ async function loadGRN() {
 
   const f = getGRNFilters();
   const [kpi, trend, byVendorVol, byVendorRej, byClient, byCat, rejReasons, expiry, byVendorCount] = await Promise.all([
-    fetchData('grn_kpi', f, true),
-    fetchData('grn_trend', f, true),
-    fetchData('grn_by_vendor', f, true),
-    fetchData('grn_vendor_rejection', f, true),
-    fetchData('grn_by_client', f, true),
-    fetchData('grn_by_category', f, true),
-    fetchData('grn_rejection_reasons', f, true),
-    fetchData('grn_expiry_risk', f, true),
-    fetchData('grn_by_vendor_count', f, true),
+    fetchData('grn_kpi', f, false),
+    fetchData('grn_trend', f, false),
+    fetchData('grn_by_vendor', f, false),
+    fetchData('grn_vendor_rejection', f, false),
+    fetchData('grn_by_client', f, false),
+    fetchData('grn_by_category', f, false),
+    fetchData('grn_rejection_reasons', f, false),
+    fetchData('grn_expiry_risk', f, false),
+    fetchData('grn_by_vendor_count', f, false),
   ]);
 
   if (kpi) {
@@ -1932,61 +2424,83 @@ async function loadGRN() {
     document.getElementById('grn-date-chip').textContent = '📅 '+fmt(f.dateFrom||'--')+' – '+fmt(f.dateTo||'--');
   }
 
-  if (trend && trend.length) {
-    grnTrendChart.data.labels = trend.map(r=>r.date);
-    grnTrendChart.data.datasets[0].data = trend.map(r=>parseInt(r.units_received)||0); // bar
-    grnTrendChart.data.datasets[1].data = trend.map(r=>parseInt(r.grn_count)||0);       // line
-    grnTrendChart.update();
-  }
+  try {
+    if (trend && trend.length && typeof grnTrendChart !== 'undefined' && grnTrendChart) {
+      grnTrendChart.data.labels = trend.map(r=>r.date);
+      grnTrendChart.data.datasets[0].data = trend.map(r=>parseInt(r.units_received)||0); // bar
+      grnTrendChart.data.datasets[1].data = trend.map(r=>parseInt(r.grn_count)||0);       // line
+      grnTrendChart.update();
+    }
+  } catch(err) { console.error('[grn_trend render]', err); }
   hideLoader('load-grn-trend');
 
   // PALETTE is now a global constant
-  if (byVendorVol && byVendorVol.length) {
-    grnVendorVolChart.data.labels = byVendorVol.map(r=>shortenLabel(r.vendor_name||r.vendor_code,20));
-    grnVendorVolChart.data.datasets[0].data = byVendorVol.map(r=>parseInt(r.units_received)||0);
-    grnVendorVolChart.data.datasets[0].backgroundColor = byVendorVol.map((_,i)=>palette[i%palette.length]);
-    grnVendorVolChart.update();
-  }
+  try {
+    if (byVendorVol && byVendorVol.length && typeof grnVendorVolChart !== 'undefined' && grnVendorVolChart) {
+      const top8Vol = byVendorVol.slice(0,8);
+      grnVendorVolChart.data.labels = top8Vol.map(r=>shortenLabel(r.vendor_code||r.vendor_name,18));
+      grnVendorVolChart.data.datasets[0].data = top8Vol.map(r=>parseInt(r.units_received)||0);
+      grnVendorVolChart.data.datasets[0].backgroundColor = top8Vol.map((_,i)=>PALETTE[i%PALETTE.length]);
+      grnVendorVolChart.update();
+    }
+  } catch(err) { console.error('[grn_by_vendor render]', err); }
   hideLoader('load-grn-vendor');
 
   // Top Vendors by GRN Count
-  if (byVendorCount && byVendorCount.length && window.grnVendorCountChart) {
-    // PALETTE is now a global constant
-    window.grnVendorCountChart.data.labels = byVendorCount.map(r=>shortenLabel(r.vendor_name||r.vendor_code,20));
-    window.grnVendorCountChart.data.datasets[0].data = byVendorCount.map(r=>parseInt(r.grn_count)||0);
-    window.grnVendorCountChart.data.datasets[0].backgroundColor = byVendorCount.map((_,i)=>palette[i%palette.length]);
-    window.grnVendorCountChart.update();
-  }
+  try {
+    if (byVendorCount && byVendorCount.length && window.grnVendorCountChart) {
+      const top8Cnt = byVendorCount.slice(0,8);
+      window.grnVendorCountChart.data.labels = top8Cnt.map(r=>shortenLabel(r.vendor_code||r.vendor_name,18));
+      window.grnVendorCountChart.data.datasets[0].data = top8Cnt.map(r=>parseInt(r.grn_count)||0);
+      window.grnVendorCountChart.data.datasets[0].backgroundColor = top8Cnt.map((_,i)=>PALETTE[i%PALETTE.length]);
+      window.grnVendorCountChart.update();
+    }
+  } catch(err) { console.error('[grn_by_vendor_count render]', err); }
   hideLoader('load-grn-vendor-count');
 
-  if (byVendorRej && byVendorRej.length) {
-    grnVendorRejChart.data.labels = byVendorRej.map(r=>shortenLabel(r.vendor_name||r.vendor_code,24));
-    grnVendorRejChart.data.datasets[0].data = byVendorRej.map(r=>parseFloat(r.rejection_rate)||0);
-    grnVendorRejChart.update();
-  }
+  try {
+    if (byVendorRej && byVendorRej.length && typeof grnVendorRejChart !== 'undefined' && grnVendorRejChart) {
+      grnVendorRejChart.data.labels = byVendorRej.map(r=>shortenLabel(r.vendor_name||r.vendor_code,24));
+      grnVendorRejChart.data.datasets[0].data = byVendorRej.map(r=>parseFloat(r.rejection_rate)||0);
+      grnVendorRejChart.update();
+    }
+  } catch(err) { console.error('[grn_vendor_rejection render]', err); }
   hideLoader('load-grn-vendor-rej');
 
-  if (byClient && byClient.length) {
-    grnClientChart.data.labels = byClient.map(r=>r.client_name);
-    grnClientChart.data.datasets[0].data = byClient.map(r=>parseInt(r.units_received)||0);
-    grnClientChart.data.datasets[0].backgroundColor = byClient.map((_,i)=>palette[i%palette.length]);
-    grnClientChart.update();
-  }
+  try {
+    const cleanClient = (byClient||[]).filter(r=>r);
+    if (cleanClient.length) {
+      const top8Client = cleanClient.slice(0,8);
+      grnClientChart.data.labels = top8Client.map(r=>r?.client_name||'Unknown');
+      grnClientChart.data.datasets[0].data = top8Client.map(r=>parseInt(r?.units_received)||0);
+      grnClientChart.data.datasets[0].backgroundColor = top8Client.map((_,i)=>PALETTE[i%PALETTE.length]);
+      grnClientChart.update();
+    }
+  } catch(err) { console.error('[grn_by_client render]', err); }
   hideLoader('load-grn-client');
 
-  if (byCat && byCat.length) {
-    grnCatChart.data.labels = byCat.map(r=>shortenLabel(r.category_name||r.category,16));
-    grnCatChart.data.datasets[0].data = byCat.map(r=>parseInt(r.units_received)||0);
-    grnCatChart.update();
-  }
+  try {
+    const cleanCat = (byCat||[]).filter(r=>r);
+    if (cleanCat.length) {
+      const top8Cat = cleanCat.slice(0,8);
+      grnCatChart.data.labels = top8Cat.map(r=>shortenLabel(r?.category_name||r?.category||'Unknown',12));
+      grnCatChart.data.datasets[0].data = top8Cat.map(r=>parseInt(r?.units_received)||0);
+      grnCatChart.update();
+    }
+  } catch(err) { console.error('[grn_by_category render]', err); }
   hideLoader('load-grn-cat');
 
-  if (rejReasons && rejReasons.length) {
+  // Force-hide all GRN loaders (safety net)
+  ['load-grn-trend','load-grn-vendor','load-grn-vendor-rej','load-grn-vendor-count','load-grn-client','load-grn-cat'].forEach(hideLoader);
+
+  try {
+  if (rejReasons && rejReasons.length && typeof grnRejChart !== 'undefined' && grnRejChart) {
     grnRejChart.data.labels = rejReasons.map(r=>shortenLabel(r.rejection_reason||'Unknown',22));
     grnRejChart.data.datasets[0].data = rejReasons.map(r=>parseInt(r.count)||0);
     grnRejChart.update();
     buildDynLegend('grn-rejection-legend', rejReasons.map(r=>shortenLabel(r.rejection_reason||'Unknown',22)), rejReasons.map(r=>parseInt(r.count)||0), [RED,AMBER,ORANGE,GOLD,BLUE,'#9B6BB5']);
   }
+  } catch(err) { console.error('[grn_rejection_reasons render]', err); }
 
   // Expiry risk slabs — based on (expiry_date - grn_date) days remaining
   ['30','60','90'].forEach(slab => {
@@ -2026,7 +2540,7 @@ async function reloadGRNTrend() {
     client: document.getElementById('grn-trend-client')?.value || 'All',
   };
   const merged = {...base, ...extra};
-  const trend = await fetchData('grn_trend', merged, true);
+  const trend = await fetchData('grn_trend', merged, false);
   if (trend && trend.length) {
     grnTrendChart.data.labels = trend.map(r=>r.date);
     grnTrendChart.data.datasets[0].data = trend.map(r=>parseInt(r.units_received)||0);
@@ -2054,17 +2568,27 @@ window.addEventListener('load',async()=>{
   initPutawayCharts();
   initGRNCharts();
 
-  // Default date range: MTD — 1st of current month to yesterday
-  const _now   = new Date();
-  const _tz    = d => d.toISOString().split('T')[0]; // yyyy-MM-dd
-  const _yesterday = new Date(_now); _yesterday.setDate(_now.getDate()-1);
-  const _firstOfMonth = new Date(_now.getFullYear(), _now.getMonth(), 1);
-  const _fromStr = _tz(_firstOfMonth);
-  const _toStr   = _tz(_yesterday);
-  const fromEl = document.getElementById('f-from');
-  const toEl   = document.getElementById('f-to');
-  if(fromEl) fromEl.value = _fromStr;
-  if(toEl)   toEl.value   = _toStr;
+  // Default date range — IST-aware MTD logic:
+  //   Day 1 of month → show previous full month (e.g. 1 Sep → 1 Aug–31 Aug)
+  //   Day 2+         → 1st of current month to yesterday (e.g. 3 Sep → 1 Sep–2 Sep)
+  const _istDateStr = new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Kolkata'});
+  const [_yearIST, _monIST, _dayIST] = _istDateStr.split('-').map(Number);
+  let _fromStr, _toStr;
+  if (_dayIST === 1) {
+    // Today is 1st — return previous month's full range
+    const _prevLast  = new Date(Date.UTC(_yearIST, _monIST-1, 0)); // last day of prev month
+    const _prevFirst = new Date(Date.UTC(_prevLast.getUTCFullYear(), _prevLast.getUTCMonth(), 1));
+    _fromStr = _prevFirst.toISOString().split('T')[0];
+    _toStr   = _prevLast.toISOString().split('T')[0];
+  } else {
+    // Today is 2nd or later — 1st of current month to yesterday
+    const _first     = new Date(Date.UTC(_yearIST, _monIST-1, 1));
+    const _yesterday = new Date(Date.UTC(_yearIST, _monIST-1, _dayIST-1));
+    _fromStr = _first.toISOString().split('T')[0];
+    _toStr   = _yesterday.toISOString().split('T')[0];
+  }
+  // f-from/f-to left EMPTY intentionally — getFilters() defaults to YTD when blank.
+  // Pta/Grn page dates still get MTD defaults below.
 
   await loadFilterOptions();
   await loadSaleOrders();
