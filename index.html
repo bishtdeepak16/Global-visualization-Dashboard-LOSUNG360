@@ -539,7 +539,6 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <div class="kpi-top"><div class="kpi-label">Delivery Rate</div>
           <div class="kpi-icon" style="background:linear-gradient(135deg,rgba(62,124,177,.18),rgba(62,124,177,.08));border-color:rgba(62,124,177,.3);">🚚</div></div>
         <div class="kpi-value" id="kpi-sv-delivery-rate">—</div>
-        <div class="kpi-delta neutral"><span class="base" id="kpi-sv-del-label">Delivered ÷ dispatched</span></div>
         <div style="position:absolute;bottom:8px;right:10px;display:flex;gap:3px;">
           <button id="pill-sv-del-order" onclick="svDelRetPill('del','order')" style="font-size:7.5px;padding:1px 6px;border-radius:20px;border:1px solid var(--orange);background:var(--orange);color:#fff;cursor:pointer;font-weight:700;line-height:1.5;">Orders</button>
           <button id="pill-sv-del-item"  onclick="svDelRetPill('del','item')"  style="font-size:7.5px;padding:1px 6px;border-radius:20px;border:1px solid var(--orange);background:transparent;color:var(--orange);cursor:pointer;font-weight:700;line-height:1.5;">Units</button>
@@ -641,21 +640,32 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         </div>
       </div>
       <!-- India Choropleth Map -->
-      <div id="sv-india-map-wrap" style="position:relative;height:460px;border-radius:14px;overflow:hidden;background:radial-gradient(ellipse at 60% 40%,#FFF3E0 0%,var(--panel) 70%);">
+      <div id="sv-india-map-wrap" style="position:relative;height:480px;border-radius:16px;overflow:hidden;
+        background:radial-gradient(ellipse at 65% 30%,#FFF6E8 0%,#FBF1DE 45%,#F5E9D2 100%);
+        box-shadow:inset 0 0 60px rgba(255,150,50,.08);">
+        <!-- Decorative background layer -->
+        <svg id="sv-map-decor" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:.5;">
+          <circle cx="15%" cy="20%" r="90" fill="none" stroke="rgba(255,140,50,.15)" stroke-width="1" stroke-dasharray="3,4"/>
+          <circle cx="85%" cy="75%" r="70" fill="none" stroke="rgba(255,140,50,.15)" stroke-width="1" stroke-dasharray="3,4"/>
+          <circle cx="88%" cy="18%" r="50" fill="none" stroke="rgba(255,140,50,.12)" stroke-width="1" stroke-dasharray="2,5"/>
+        </svg>
+        <div style="position:absolute;top:14px;left:16px;font-size:20px;opacity:.22;pointer-events:none;">🚚</div>
+        <div style="position:absolute;bottom:16px;left:20px;font-size:18px;opacity:.2;pointer-events:none;">📦</div>
+        <div style="position:absolute;top:16px;right:210px;font-size:18px;opacity:.2;pointer-events:none;">🏭</div>
+
         <div id="sv-map-loader" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;z-index:50;">
           <div style="width:30px;height:30px;border:3px solid rgba(255,107,0,.2);border-top-color:var(--orange);border-radius:50%;animation:spin .8s linear infinite;"></div>
           <div style="font-size:11px;color:var(--ink-soft);font-weight:600;">Loading map…</div>
         </div>
-        <svg id="sv-india-map" style="width:100%;height:100%;display:block;"></svg>
-        <div id="sv-labels-layer" style="position:absolute;inset:0;pointer-events:none;"></div>
+        <svg id="sv-india-map" style="width:100%;height:100%;display:block;position:relative;z-index:2;"></svg>
+        <div id="sv-labels-layer" style="position:absolute;inset:0;pointer-events:none;z-index:3;"></div>
         <div id="sv-map-tooltip" style="display:none;position:absolute;background:rgba(20,16,10,.92);color:#fff;padding:10px 14px;border-radius:10px;font-size:11.5px;pointer-events:none;z-index:100;min-width:170px;line-height:1.8;box-shadow:0 6px 20px rgba(0,0,0,.3);border:1px solid rgba(255,107,0,.3);"></div>
-        <div style="position:absolute;top:12px;left:12px;display:flex;flex-direction:column;gap:4px;z-index:40;">
-          <button onclick="svMapZoom(1.5)" style="width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--panel);color:var(--ink);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px var(--shadow);">+</button>
-          <button onclick="svMapZoom(0.67)" style="width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--panel);color:var(--ink);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px var(--shadow);">−</button>
-        </div>
-        <button id="sv-map-back" onclick="svMapReset()" style="display:none;position:absolute;top:12px;left:48px;z-index:40;padding:5px 12px;border-radius:7px;border:1px solid var(--border);background:var(--panel);color:var(--orange);font-size:11px;font-weight:700;cursor:pointer;box-shadow:0 2px 6px var(--shadow);">← All India</button>
-        <div style="position:absolute;bottom:10px;right:12px;display:flex;gap:6px;align-items:center;background:var(--panel);padding:4px 10px;border-radius:20px;border:1px solid var(--border);">
-          <div style="width:60px;height:8px;border-radius:4px;background:linear-gradient(to right,#FFF1D8,#FFB52E,#FF6B00,#E83B12);"></div>
+
+        <button id="sv-map-back" onclick="svMapReset()" style="display:none;position:absolute;top:14px;left:16px;z-index:40;padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--orange);font-size:11.5px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px var(--shadow);align-items:center;gap:5px;">← All India</button>
+
+        <div style="position:absolute;bottom:12px;right:14px;display:flex;gap:8px;align-items:center;background:var(--panel);padding:5px 12px;border-radius:20px;border:1px solid var(--border);box-shadow:0 2px 8px var(--shadow);">
+          <span style="font-size:9.5px;color:var(--ink-soft);font-weight:600;">Order Volume</span>
+          <div style="width:70px;height:8px;border-radius:4px;background:linear-gradient(to right,#FFF1D8,#FFB52E,#FF6B00,#E83B12);"></div>
           <span style="font-size:9px;color:var(--ink-soft);">Low → High</span>
         </div>
       </div>
@@ -3171,7 +3181,6 @@ function svDelRetPill(metric, level){
     document.getElementById('pill-sv-del-order').style.color    =level==='order'?'#fff':'var(--orange)';
     document.getElementById('pill-sv-del-item').style.background=level==='item' ?'var(--orange)':'transparent';
     document.getElementById('pill-sv-del-item').style.color    =level==='item' ?'#fff':'var(--orange)';
-    document.getElementById('kpi-sv-del-label').textContent=level==='item'?'Delivered units ÷ dispatched units':'Delivered orders ÷ dispatched orders';
   } else {
     _svRetLevel=level;
     document.getElementById('pill-sv-ret-order').style.background=level==='order'?'var(--orange)':'transparent';
@@ -3231,7 +3240,11 @@ const SV_STATUS_CFG={
 const SV_STATUS_MERGE={
   'SHIPPED':'IN_TRANSIT','DISPATCHED':'IN_TRANSIT',
   'RETURN_EXPECTED':'RETURN_IN_TRANSIT',
-  'RETURNED':'RETURN_DELIVERED',
+  'RETURNED':'RETURN_DELIVERED','RETURN_ACKNOWLEDGED':'RETURN_DELIVERED',
+  // Pre-dispatch statuses — all roll into PROCESSING so % of Orders/Units sums to 100%
+  'CREATED':'PROCESSING','MANIFESTED':'PROCESSING','PACKED':'PROCESSING',
+  'PICKED':'PROCESSING','PICKING':'PROCESSING','READY_TO_SHIP':'PROCESSING',
+  'LOCATION_NOT_SERVICEABLE':'PROCESSING',
 };
 const SV_STATUS_ORDER=['DELIVERED','IN_TRANSIT','RETURN_IN_TRANSIT','RETURN_DELIVERED','RTO','RTO_DELIVERED','CANCELLED','PROCESSING','COMPLETE'];
 
@@ -3574,9 +3587,9 @@ function svStateMetric(v){
   svRenderIndiaMap(v);
 }
 
-// ── India Choropleth Map (D3 + real GeoJSON) ─────────────────
-let _svMapGeo=null, _svDistrictGeo=null, _svMapZoom=null, _svMapG=null, _svMapPath=null, _svMapProj=null;
-let _svMapCurrentState=null;
+// ── India Choropleth Map (D3 + real GeoJSON, fitExtent — guaranteed full fit) ──
+let _svMapGeo=null, _svDistrictGeo=null, _svMapG=null, _svMapPath=null, _svMapProj=null;
+let _svMapCurrentState=null, _svMapTransform={x:0,y:0,k:1};
 const _SV_GEO_URL='https://raw.githubusercontent.com/geohacker/india/master/state/india_state.geojson';
 const _SV_DIST_URL='https://raw.githubusercontent.com/geohacker/india/master/district/india_district.geojson';
 
@@ -3592,9 +3605,8 @@ function _svMapColor(orders, max){
 
 async function _svLoadGeo(){
   if(_svMapGeo) return _svMapGeo;
-  try{
-    const r=await fetch(_SV_GEO_URL); _svMapGeo=await r.json(); return _svMapGeo;
-  }catch(e){ console.warn('India GeoJSON fetch failed',e); return null; }
+  try{ const r=await fetch(_SV_GEO_URL); _svMapGeo=await r.json(); return _svMapGeo; }
+  catch(e){ console.warn('India GeoJSON fetch failed',e); return null; }
 }
 
 function svRenderIndiaMap(metric){
@@ -3611,31 +3623,36 @@ function svRenderIndiaMap(metric){
 function _svDrawMap(geo, metric){
   const wrap=document.getElementById('sv-india-map-wrap');
   const svg =d3.select('#sv-india-map');
-  const W=wrap.clientWidth||600, H=wrap.clientHeight||460;
+  const W=wrap.clientWidth||700, H=wrap.clientHeight||480;
+
   svg.attr('viewBox',`0 0 ${W} ${H}`);
 
-  _svMapProj=d3.geoMercator().center([83,23]).scale(Math.min(W,H)*2.35).translate([W*.5,H*.48]);
+  // fitExtent guarantees the ENTIRE geometry (incl. Tamil Nadu, Kerala, NE, A&N)
+  // fits within the padded box — no manual lat/lon guessing, no cutoff ever.
+  const pad=28;
+  _svMapProj=d3.geoMercator();
+  _svMapProj.fitExtent([[pad,pad],[W-pad,H-pad]], geo);
   _svMapPath=d3.geoPath().projection(_svMapProj);
 
   svg.selectAll('*').remove();
-  _svMapG=svg.append('g');
+  _svMapG=svg.append('g').attr('id','sv-map-g');
+  _svMapTransform={x:0,y:0,k:1};
 
-  // Color scale
   const data=_svStateData.length?_svStateData:[];
   const dataMap={};
-  data.forEach(d=>{ dataMap[d.state]={orders:parseInt(d.orders)||0,delivery_rate:parseFloat(d.delivery_rate)||0,return_rate:parseFloat(d.return_rate)||0,revenue:parseFloat(d.revenue)||0}; });
+  data.forEach(d=>{ dataMap[d.state]={orders:parseInt(d.orders)||0,units:parseInt(d.units)||0,
+    delivery_rate:parseFloat(d.delivery_rate)||0,return_rate:parseFloat(d.return_rate)||0,revenue:parseFloat(d.revenue)||0}; });
   const metricKey=metric==='return_rate'?'return_rate':metric==='revenue'?'revenue':metric==='units'?'units':'orders';
   const vals=data.map(d=>parseFloat(d[metricKey])||0);
   const maxVal=Math.max(...vals,1);
 
-  // Draw states
   _svMapG.selectAll('.sv-state')
     .data(geo.features).join('path')
     .attr('class','sv-state')
     .attr('d',_svMapPath)
     .attr('fill',d=>{ const n=_svStateName(d); const info=dataMap[n]; return info?_svMapColor(parseFloat(info[metricKey])||0,maxVal):'#F5ECD6'; })
-    .attr('stroke','#fff').attr('stroke-width',.6).attr('stroke-linejoin','round')
-    .style('cursor','pointer').style('transition','filter .15s,stroke-width .15s')
+    .attr('stroke','#fff').attr('stroke-width',.7).attr('stroke-linejoin','round')
+    .style('cursor','pointer').style('transition','filter .15s')
     .on('mouseenter',function(e,d){
       d3.select(this).attr('stroke-width',1.8).raise();
       const n=_svStateName(d); const info=dataMap[n]||{};
@@ -3643,7 +3660,8 @@ function _svDrawMap(geo, metric){
       tip.innerHTML=`<strong style="color:#FFB52E;font-size:13px;">${n}</strong><br>
         <div style="display:flex;justify-content:space-between;gap:16px;"><span>Orders</span><span style="font-weight:700;">${fmtCount(info.orders||0)}</span></div>
         <div style="display:flex;justify-content:space-between;gap:16px;"><span>Delivery</span><span style="font-weight:700;">${(info.delivery_rate||0).toFixed(1)}%</span></div>
-        <div style="display:flex;justify-content:space-between;gap:16px;"><span>Returns</span><span style="font-weight:700;">${(info.return_rate||0).toFixed(1)}%</span></div>`;
+        <div style="display:flex;justify-content:space-between;gap:16px;"><span>Returns</span><span style="font-weight:700;">${(info.return_rate||0).toFixed(1)}%</span></div>
+        <div style="font-size:9.5px;color:#FFB52E;margin-top:4px;opacity:.8;">Click to view districts →</div>`;
       tip.style.display='block';
     })
     .on('mousemove',function(e){
@@ -3652,54 +3670,92 @@ function _svDrawMap(geo, metric){
       tip.style.left=Math.min(e.clientX-rect.left+14,W-185)+'px';
       tip.style.top =Math.max(e.clientY-rect.top-10,5)+'px';
     })
-    .on('mouseleave',function(){ d3.select(this).attr('stroke-width',.6); document.getElementById('sv-map-tooltip').style.display='none'; })
-    .on('click',function(e,d){ _svMapClickState(e,d,dataMap); });
+    .on('mouseleave',function(){ d3.select(this).attr('stroke-width',.7); document.getElementById('sv-map-tooltip').style.display='none'; })
+    .on('click',function(e,d){ _svMapClickState(d,dataMap); });
 
-  // Labels for top 12
+  _svRenderStateLabels(geo, data, metricKey);
+}
+
+// ── Labels: positioned from base (untransformed) centroids, offset by current transform ──
+function _svLabelScreenPos(baseX, baseY){
+  const {x,y,k}=_svMapTransform;
+  return [x + k*baseX, y + k*baseY];
+}
+
+function _svRenderStateLabels(geo, data, metricKey){
   const labelsEl=document.getElementById('sv-labels-layer');
   labelsEl.innerHTML='';
-  const top=[...data].sort((a,b)=>(parseFloat(b[metricKey])||0)-(parseFloat(a[metricKey])||0)).slice(0,12);
+  const top=[...data].sort((a,b)=>(parseFloat(b[metricKey])||0)-(parseFloat(a[metricKey])||0)).slice(0,13);
   top.forEach(d=>{
     const feat=geo.features.find(f=>_svStateName(f)===d.state);
     if(!feat) return;
-    const [cx,cy]=_svMapPath.centroid(feat);
-    if(isNaN(cx)||isNaN(cy)) return;
+    const [bx,by]=_svMapPath.centroid(feat);
+    if(isNaN(bx)||isNaN(by)) return;
     const v=parseFloat(d[metricKey])||0;
     const label=document.createElement('div');
-    label.style.cssText=`position:absolute;left:${cx}px;top:${cy}px;transform:translate(-50%,-50%);
-      background:rgba(255,255,255,.9);backdrop-filter:blur(6px);border:1px solid rgba(255,140,60,.35);
-      border-radius:7px;padding:2px 7px;font-size:9.5px;font-weight:700;color:#202020;
-      white-space:nowrap;box-shadow:0 2px 6px rgba(120,80,20,.15);pointer-events:none;`;
+    label.className='sv-map-label';
+    label.dataset.bx=bx; label.dataset.by=by;
+    label.style.cssText=`position:absolute;transform:translate(-50%,-50%);
+      background:rgba(255,255,255,.94);backdrop-filter:blur(6px);border:1px solid rgba(255,140,60,.35);
+      border-radius:8px;padding:3px 8px;font-size:9.5px;font-weight:700;color:#202020;
+      white-space:nowrap;box-shadow:0 2px 6px rgba(120,80,20,.18);pointer-events:none;z-index:5;
+      transition:opacity .2s;`;
     const fmt=metricKey==='orders'||metricKey==='units'?fmtCount(v):metricKey==='revenue'?fmtRev(v):v.toFixed(1)+'%';
     label.innerHTML=`${d.state}<br><span style="color:#FF6B00;font-size:10.5px;">${fmt}</span>`;
     labelsEl.appendChild(label);
   });
-
-  // Zoom behavior
-  _svMapZoom=d3.zoom().scaleExtent([.8,20]).on('zoom',e=>{ _svMapG.attr('transform',e.transform); });
-  svg.call(_svMapZoom);
+  _svUpdateLabelPositions();
 }
 
-function _svMapClickState(e,d,dataMap){
+function _svUpdateLabelPositions(){
+  document.querySelectorAll('.sv-map-label').forEach(el=>{
+    const bx=parseFloat(el.dataset.bx), by=parseFloat(el.dataset.by);
+    const [sx,sy]=_svLabelScreenPos(bx,by);
+    el.style.left=sx+'px'; el.style.top=sy+'px';
+  });
+}
+
+// ── Click state: NO scroll/wheel zoom anywhere. Direct programmatic transform only. ──
+function _svMapClickState(d, dataMap){
   const name=_svStateName(d);
   _svMapCurrentState=name;
-  // Highlight
-  d3.select('#sv-india-map').selectAll('.sv-state').attr('stroke','#fff').attr('stroke-width',.6);
-  d3.select(e.target).attr('stroke','#FF6B00').attr('stroke-width',2);
-  // Zoom to state bounds
   const wrap=document.getElementById('sv-india-map-wrap');
   const W=wrap.clientWidth, H=wrap.clientHeight;
+
+  d3.select('#sv-india-map').selectAll('.sv-state').attr('stroke','#fff').attr('stroke-width',.7);
+
   const [[x0,y0],[x1,y1]]=_svMapPath.bounds(d);
-  const padX=(x1-x0)*.3, padY=(y1-y0)*.3;
-  const scale=Math.min(.85*W/(x1-x0+2*padX),.82*H/(y1-y0+2*padY),16);
-  const tx=W/2-scale*(x0+x1)/2, ty=H/2-scale*(y0+y1)/2;
-  d3.select('#sv-india-map').transition().duration(650).ease(d3.easeCubicInOut)
-    .call(_svMapZoom.transform,d3.zoomIdentity.translate(tx,ty).scale(scale));
+  const bw=x1-x0, bh=y1-y0;
+  const pad=0.28;
+  const k=Math.min((W*(1-pad))/bw, (H*(1-pad))/bh, 14);
+  const tx=W/2 - k*(x0+x1)/2;
+  const ty=H/2 - k*(y0+y1)/2;
+
+  _svAnimateTransform(tx, ty, k, 650, () => {
+    document.querySelectorAll('.sv-map-label').forEach(el=>el.style.opacity='0');
+  });
+
   document.getElementById('sv-map-back').style.display='flex';
-  // Hide labels during zoom
-  document.getElementById('sv-labels-layer').style.opacity='0';
-  // Load districts
   _svLoadDistricts(name);
+}
+
+function _svAnimateTransform(tx, ty, k, duration, onDone){
+  const start={x:_svMapTransform.x,y:_svMapTransform.y,k:_svMapTransform.k};
+  const t0=performance.now();
+  function step(now){
+    const p=Math.min((now-t0)/duration,1);
+    const ease=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;
+    _svMapTransform={
+      x: start.x+(tx-start.x)*ease,
+      y: start.y+(ty-start.y)*ease,
+      k: start.k+(k-start.k)*ease
+    };
+    _svMapG.attr('transform',`translate(${_svMapTransform.x},${_svMapTransform.y}) scale(${_svMapTransform.k})`);
+    _svUpdateLabelPositions();
+    if(p<1) requestAnimationFrame(step);
+    else if(onDone) onDone();
+  }
+  requestAnimationFrame(step);
 }
 
 let _svDistrictDataCache={};
@@ -3707,30 +3763,22 @@ let _svDistrictDataCache={};
 function _svLoadDistricts(stateName){
   const geoP = _svDistrictGeo ? Promise.resolve(_svDistrictGeo)
     : fetch(_SV_DIST_URL).then(r=>r.json()).then(g=>{ _svDistrictGeo=g; return g; });
-
   const dataP = _svDistrictDataCache[stateName]
     ? Promise.resolve(_svDistrictDataCache[stateName])
-    : fetchData('seller_by_district', {state: stateName}).then(d=>{
-        _svDistrictDataCache[stateName]=d||[];
-        return d||[];
-      }).catch(()=>[]);
-
-  Promise.all([geoP, dataP]).then(([geo, distData])=>{
-    _svDrawDistricts(stateName, distData||[]);
-  }).catch(()=>{ console.warn('District data unavailable'); });
+    : fetchData('seller_by_district', {state: stateName}).then(d=>{ _svDistrictDataCache[stateName]=d||[]; return d||[]; }).catch(()=>[]);
+  Promise.all([geoP, dataP]).then(([geo, distData])=>{ _svDrawDistricts(stateName, distData||[]); })
+    .catch(()=>{ console.warn('District data unavailable'); });
 }
 
 function _svDrawDistricts(stateName, distData){
   if(!_svDistrictGeo) return;
   const dists=_svDistrictGeo.features.filter(f=>(f.properties.NAME_1||'').toLowerCase()===stateName.toLowerCase());
 
-  // Map district data by normalized name for matching
   const distMap={};
   (distData||[]).forEach(d=>{
     const key=(d.district||'').trim().toUpperCase();
     distMap[key]={orders:parseInt(d.orders)||0,units:parseInt(d.units)||0,
-      revenue:parseFloat(d.revenue)||0,delivery_rate:parseFloat(d.delivery_rate)||0,
-      return_rate:parseFloat(d.return_rate)||0};
+      revenue:parseFloat(d.revenue)||0,delivery_rate:parseFloat(d.delivery_rate)||0,return_rate:parseFloat(d.return_rate)||0};
   });
   const maxOrders=Math.max(...Object.values(distMap).map(d=>d.orders),1);
 
@@ -3740,12 +3788,12 @@ function _svDrawDistricts(stateName, distData){
     .attr('fill',d=>{
       const n=(d.properties.NAME_2||d.properties.district||'').trim().toUpperCase();
       const info=distMap[n];
-      return info&&info.orders ? _svMapColor(info.orders,maxOrders) : 'rgba(234,228,219,.35)';
+      return info&&info.orders ? _svMapColor(info.orders,maxOrders) : 'rgba(234,228,219,.4)';
     })
-    .attr('stroke','rgba(255,255,255,.75)').attr('stroke-width',.4)
+    .attr('stroke','rgba(255,255,255,.8)').attr('stroke-width',.5/_svMapTransform.k)
     .style('cursor','pointer')
     .on('mouseenter',function(e,d){
-      d3.select(this).attr('stroke-width',1.4).raise();
+      d3.select(this).attr('stroke-width',1.4/_svMapTransform.k).raise();
       const nRaw=d.properties.NAME_2||d.properties.district||'District';
       const n=nRaw.trim().toUpperCase();
       const info=distMap[n];
@@ -3767,23 +3815,44 @@ function _svDrawDistricts(stateName, distData){
       tip.style.left=Math.min(e.clientX-rect.left+14,rect.width-190)+'px';
       tip.style.top=Math.max(e.clientY-rect.top-10,5)+'px';
     })
-    .on('mouseleave',function(){ d3.select(this).attr('stroke-width',.4); document.getElementById('sv-map-tooltip').style.display='none'; });
-}
+    .on('mouseleave',function(){ d3.select(this).attr('stroke-width',.5/_svMapTransform.k); document.getElementById('sv-map-tooltip').style.display='none'; });
 
-function svMapZoom(factor){
-  if(!_svMapZoom) return;
-  d3.select('#sv-india-map').transition().duration(300).call(_svMapZoom.scaleBy,factor);
+  const labelsEl=document.getElementById('sv-labels-layer');
+  labelsEl.innerHTML='';
+  const topDist=[...dists].map(d=>{
+    const n=(d.properties.NAME_2||d.properties.district||'').trim().toUpperCase();
+    return {feat:d, info:distMap[n]||{orders:0}, name:d.properties.NAME_2||d.properties.district||''};
+  }).filter(x=>x.info.orders>0).sort((a,b)=>b.info.orders-a.info.orders).slice(0,8);
+
+  topDist.forEach(({feat,info,name})=>{
+    const [bx,by]=_svMapPath.centroid(feat);
+    if(isNaN(bx)||isNaN(by)) return;
+    const label=document.createElement('div');
+    label.className='sv-map-label';
+    label.dataset.bx=bx; label.dataset.by=by;
+    label.style.cssText=`position:absolute;transform:translate(-50%,-50%);
+      background:rgba(255,255,255,.94);border:1px solid rgba(255,140,60,.35);border-radius:7px;
+      padding:2px 7px;font-size:9px;font-weight:700;color:#202020;white-space:nowrap;
+      box-shadow:0 2px 6px rgba(120,80,20,.15);pointer-events:none;z-index:5;`;
+    label.innerHTML=`${name}<br><span style="color:#FF6B00;font-size:10px;">${fmtCount(info.orders)} · ${fmtRev(info.revenue)}</span>`;
+    labelsEl.appendChild(label);
+  });
+  _svUpdateLabelPositions();
 }
 
 function svMapReset(){
-  if(!_svMapZoom) return;
   _svMapCurrentState=null;
-  d3.select('#sv-india-map').selectAll('.sv-state').attr('stroke','#fff').attr('stroke-width',.6);
+  d3.select('#sv-india-map').selectAll('.sv-state').attr('stroke','#fff').attr('stroke-width',.7);
   d3.select('#sv-india-map').selectAll('.sv-district').remove();
-  d3.select('#sv-india-map').transition().duration(600).ease(d3.easeCubicInOut)
-    .call(_svMapZoom.transform,d3.zoomIdentity);
+  _svAnimateTransform(0,0,1,600,()=>{
+    document.querySelectorAll('.sv-map-label').forEach(el=>el.style.opacity='1');
+    if(_svMapGeo){
+      const data=_svStateData.length?_svStateData:[];
+      const metricKey=window._svStateMode==='return_rate'?'return_rate':window._svStateMode==='revenue'?'revenue':window._svStateMode==='units'?'units':'orders';
+      _svRenderStateLabels(_svMapGeo, data, metricKey);
+    }
+  });
   document.getElementById('sv-map-back').style.display='none';
-  document.getElementById('sv-labels-layer').style.opacity='1';
 }
 
 function svRenderStateChart(m){
@@ -3877,4 +3946,3 @@ document.getElementById('btn-apply-so').addEventListener('click',_svFilterWatch)
 
 </body>
 </html>
-  
