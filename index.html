@@ -3614,7 +3614,7 @@ function _svDrawMap(geo, metric){
   const W=wrap.clientWidth||600, H=wrap.clientHeight||460;
   svg.attr('viewBox',`0 0 ${W} ${H}`);
 
-  _svMapProj=d3.geoMercator().center([82.5,22.5]).scale(Math.min(W,H)*4.0).translate([W*.43,H*.5]);
+  _svMapProj=d3.geoMercator().center([83,23]).scale(Math.min(W,H)*2.35).translate([W*.5,H*.48]);
   _svMapPath=d3.geoPath().projection(_svMapProj);
 
   svg.selectAll('*').remove();
@@ -3702,34 +3702,72 @@ function _svMapClickState(e,d,dataMap){
   _svLoadDistricts(name);
 }
 
+let _svDistrictDataCache={};
+
 function _svLoadDistricts(stateName){
-  if(_svDistrictGeo){ _svDrawDistricts(stateName); return; }
-  fetch(_SV_DIST_URL).then(r=>r.json()).then(geo=>{ _svDistrictGeo=geo; _svDrawDistricts(stateName); })
-    .catch(()=>{ console.warn('District data unavailable'); });
+  const geoP = _svDistrictGeo ? Promise.resolve(_svDistrictGeo)
+    : fetch(_SV_DIST_URL).then(r=>r.json()).then(g=>{ _svDistrictGeo=g; return g; });
+
+  const dataP = _svDistrictDataCache[stateName]
+    ? Promise.resolve(_svDistrictDataCache[stateName])
+    : fetchData('seller_by_district', {state: stateName}).then(d=>{
+        _svDistrictDataCache[stateName]=d||[];
+        return d||[];
+      }).catch(()=>[]);
+
+  Promise.all([geoP, dataP]).then(([geo, distData])=>{
+    _svDrawDistricts(stateName, distData||[]);
+  }).catch(()=>{ console.warn('District data unavailable'); });
 }
 
-function _svDrawDistricts(stateName){
+function _svDrawDistricts(stateName, distData){
   if(!_svDistrictGeo) return;
   const dists=_svDistrictGeo.features.filter(f=>(f.properties.NAME_1||'').toLowerCase()===stateName.toLowerCase());
+
+  // Map district data by normalized name for matching
+  const distMap={};
+  (distData||[]).forEach(d=>{
+    const key=(d.district||'').trim().toUpperCase();
+    distMap[key]={orders:parseInt(d.orders)||0,units:parseInt(d.units)||0,
+      revenue:parseFloat(d.revenue)||0,delivery_rate:parseFloat(d.delivery_rate)||0,
+      return_rate:parseFloat(d.return_rate)||0};
+  });
+  const maxOrders=Math.max(...Object.values(distMap).map(d=>d.orders),1);
+
   _svMapG.selectAll('.sv-district').remove();
   _svMapG.selectAll('.sv-district').data(dists).join('path')
     .attr('class','sv-district').attr('d',_svMapPath)
-    .attr('fill','rgba(255,107,0,.12)').attr('stroke','rgba(255,255,255,.7)').attr('stroke-width',.35)
+    .attr('fill',d=>{
+      const n=(d.properties.NAME_2||d.properties.district||'').trim().toUpperCase();
+      const info=distMap[n];
+      return info&&info.orders ? _svMapColor(info.orders,maxOrders) : 'rgba(234,228,219,.35)';
+    })
+    .attr('stroke','rgba(255,255,255,.75)').attr('stroke-width',.4)
     .style('cursor','pointer')
     .on('mouseenter',function(e,d){
-      d3.select(this).attr('fill','rgba(255,107,0,.35)');
-      const n=d.properties.NAME_2||d.properties.district||'District';
+      d3.select(this).attr('stroke-width',1.4).raise();
+      const nRaw=d.properties.NAME_2||d.properties.district||'District';
+      const n=nRaw.trim().toUpperCase();
+      const info=distMap[n];
       const tip=document.getElementById('sv-map-tooltip');
-      tip.innerHTML=`<strong style="color:#FFB52E;">${n}</strong><br><span style="opacity:.7;font-size:10px">${stateName}</span>`;
+      if(info && info.orders){
+        tip.innerHTML=`<strong style="color:#FFB52E;font-size:13px;">${nRaw}</strong><br>
+          <div style="display:flex;justify-content:space-between;gap:16px;"><span>Orders</span><span style="font-weight:700;">${fmtCount(info.orders)}</span></div>
+          <div style="display:flex;justify-content:space-between;gap:16px;"><span>Units</span><span style="font-weight:700;">${fmtCount(info.units)}</span></div>
+          <div style="display:flex;justify-content:space-between;gap:16px;"><span>Revenue</span><span style="font-weight:700;">${fmtRev(info.revenue)}</span></div>
+          <div style="display:flex;justify-content:space-between;gap:16px;"><span>Delivery</span><span style="font-weight:700;">${info.delivery_rate.toFixed(1)}%</span></div>`;
+      } else {
+        tip.innerHTML=`<strong style="color:#FFB52E;">${nRaw}</strong><br><span style="opacity:.7;font-size:10.5px">No orders in this district</span>`;
+      }
       tip.style.display='block';
     })
     .on('mousemove',function(e){
       const rect=document.getElementById('sv-india-map-wrap').getBoundingClientRect();
       const tip=document.getElementById('sv-map-tooltip');
-      tip.style.left=Math.min(e.clientX-rect.left+14,500)+'px';
+      tip.style.left=Math.min(e.clientX-rect.left+14,rect.width-190)+'px';
       tip.style.top=Math.max(e.clientY-rect.top-10,5)+'px';
     })
-    .on('mouseleave',function(){ d3.select(this).attr('fill','rgba(255,107,0,.12)'); document.getElementById('sv-map-tooltip').style.display='none'; });
+    .on('mouseleave',function(){ d3.select(this).attr('stroke-width',.4); document.getElementById('sv-map-tooltip').style.display='none'; });
 }
 
 function svMapZoom(factor){
