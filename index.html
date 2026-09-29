@@ -308,7 +308,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <!-- Pill toggle moved here -->
       <div class="pill-toggle" data-group="sale_orders">
         <button class="active" data-view="viz">📊 Visualisation</button>
-        <button data-view="analytics">🧠 Analytics</button>
+        <button data-view="analytics">📈 Projection</button>
         <button data-view="seller">🛍️ Seller View</button>
       </div>
       <div class="date-chip" id="so-date-chip">📅 Loading…</div>
@@ -501,26 +501,82 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
   <!-- ANALYTICS VIEW -->
   <div class="view" id="sale_orders-analytics">
-    <div class="kpi-row-3" style="margin-bottom:18px;">
-      <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">Avg Order Value</div><div class="kpi-icon">📈</div></div><div class="kpi-value" id="kpi-aov">—</div><div class="kpi-delta neutral"><span class="base">revenue / orders</span></div></div>
-      <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">Discount Impact</div><div class="kpi-icon">🏷️</div></div><div class="kpi-value" id="kpi-discount">—</div><div class="kpi-delta neutral"><span class="base">% of revenue</span></div></div>
-      <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">Tax Collected</div><div class="kpi-icon">🧾</div></div><div class="kpi-value" id="kpi-tax">—</div><div class="kpi-delta neutral"><span class="base">SUM tax_value</span></div></div>
+
+    <!-- PROJECTION KPI ROW (5 boxes) -->
+    <div class="kpi-row" style="grid-template-columns:repeat(5,1fr);margin-bottom:14px;">
+      <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">30-Day Run Rate</div><div class="kpi-icon">🏃</div></div><div class="kpi-value" id="proj-runrate">—</div><div class="kpi-delta neutral"><span class="base">avg orders/day</span></div></div>
+      <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">Trend Signal</div><div class="kpi-icon">📶</div></div><div class="kpi-value" id="proj-trend">—</div><div class="kpi-delta neutral" id="proj-trend-delta"><span class="base">recent vs prior half</span></div></div>
+      <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">Forecast Accuracy</div><div class="kpi-icon">🎯</div></div><div class="kpi-value" id="proj-mad">—</div><div class="kpi-delta neutral"><span class="base">avg error (MAD), 3mo backtest</span></div></div>
+      <div class="kpi-card" style="position:relative;"><div class="kpi-top"><div class="kpi-label">Projected Next 30 Days</div><div class="kpi-icon">🔮</div></div><div class="kpi-value" id="proj-forecast">—</div><div class="kpi-delta neutral"><span class="base" id="proj-forecast-band">Low – High</span></div></div>
+      <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">Discount Lift Ratio</div><div class="kpi-icon">🏷️</div></div><div class="kpi-value" id="proj-disclift">—</div><div class="kpi-delta neutral"><span class="base">revenue lift / discount %</span></div></div>
     </div>
+
+    <!-- VISUAL 2: Rolling Trend + Forecast -->
+    <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Demand Trend &amp; Forecast</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
+    <div class="panel" style="margin-bottom:18px;position:relative;">
+      <div class="panel-head">
+        <div class="panel-head-left"><div class="panel-title">Rolling Demand Trend + 30-Day Forecast</div><div class="panel-sub">Solid = actual daily orders · Dashed = projected · Shaded = ± backtest error band</div></div>
+        <span class="tag gold">Level + Trend model</span>
+      </div>
+      <div class="chart-box" style="height:300px;"><canvas id="chartProjTrend"></canvas></div>
+      <div class="loading-overlay" id="load-proj-trend"><div class="spinner"></div></div>
+    </div>
+
+    <!-- VISUAL 1 + 3: Monthly Volume + Day-of-Week -->
     <div class="grid grid-2b" style="margin-bottom:18px;">
       <div class="panel" style="position:relative;">
-        <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Fulfilment TAT Distribution</div><div class="panel-sub">Order-to-dispatch time buckets</div></div><span class="tag">Analytics</span></div>
-        <div class="chart-box" style="height:280px;"><canvas id="chartTATDist"></canvas></div>
-        <div class="loading-overlay" id="load-tatdist"><div class="spinner"></div></div>
+        <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Monthly Volume Trend</div><div class="panel-sub">Orders by calendar month</div></div><span class="tag">Projection</span></div>
+        <div class="chart-box" style="height:270px;"><canvas id="chartProjMonthly"></canvas></div>
+        <div class="loading-overlay" id="load-proj-monthly"><div class="spinner"></div></div>
       </div>
       <div class="panel" style="position:relative;">
-        <div class="panel-head"><div class="panel-title">Courier SLA %</div></div>
-        <div class="chart-box" style="height:280px;"><canvas id="chartCourierSla"></canvas></div>
-        <div class="loading-overlay" id="load-couriersla"><div class="spinner"></div></div>
+        <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Day-of-Week Demand Pattern</div><div class="panel-sub">Avg orders per weekday</div></div></div>
+        <div class="chart-box" style="height:270px;"><canvas id="chartProjDow"></canvas></div>
+        <div class="loading-overlay" id="load-proj-dow"><div class="spinner"></div></div>
       </div>
     </div>
-    <div class="panel">
-      <div class="panel-head"><div class="panel-title">Key Insights</div></div>
-      <div id="insights-so"></div>
+
+    <!-- VISUAL 4: Channel-wise Trend -->
+    <div class="panel" style="margin-bottom:18px;position:relative;">
+      <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Channel-wise Demand Trend</div><div class="panel-sub">Monthly orders per marketplace channel</div></div></div>
+      <div class="chart-box" style="height:280px;"><canvas id="chartProjChannel"></canvas></div>
+      <div class="loading-overlay" id="load-proj-channel"><div class="spinner"></div></div>
+    </div>
+
+    <!-- VISUAL 5 + 6: SKU Velocity + Discount Lift -->
+    <div class="section-divider"><div class="sd-line"></div><div class="sd-label">SKU &amp; Discount Signals</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
+    <div class="grid grid-2b" style="margin-bottom:18px;">
+      <div class="panel" style="position:relative;">
+        <div class="panel-head"><div class="panel-head-left"><div class="panel-title">SKU Velocity Matrix</div><div class="panel-sub">Top 10 selling SKUs — volume (x) vs growth % last-30 vs prior-30 (y)</div></div></div>
+        <div class="chart-box" style="height:300px;"><canvas id="chartProjVelocity"></canvas></div>
+        <div class="loading-overlay" id="load-proj-velocity"><div class="spinner"></div></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;padding:0 16px 14px;font-size:10px;color:var(--ink-soft);">
+          <span>🟢 Rising Stars</span><span>🔵 Workhorses</span><span>🟠 Emerging</span><span>🔴 Review</span>
+        </div>
+      </div>
+      <div class="panel" style="position:relative;">
+        <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Discount vs Volume Lift</div><div class="panel-sub">Bars = avg daily orders · Line = avg revenue/order</div></div></div>
+        <div class="chart-box" style="height:300px;"><canvas id="chartProjDiscount"></canvas></div>
+        <div class="loading-overlay" id="load-proj-discount"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- VISUAL 7: Reorder Recommendation -->
+    <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Inventory Alignment</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--red))"></div></div>
+    <div class="panel" style="position:relative;">
+      <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Reorder Recommendation</div><div class="panel-sub">Forecasted demand vs current stock — safety stock sized from the backtest error (MAD)</div></div><span class="tag">Top 100 by demand</span></div>
+      <div style="overflow-x:auto;">
+        <table class="sv-channel-table" style="width:100%;">
+          <thead>
+            <tr>
+              <th>SKU</th><th>Client</th><th>FC</th><th>On Hand</th><th>Avg Daily Demand</th>
+              <th>Days of Cover</th><th>Safety Stock</th><th>Suggested Reorder Qty</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="proj-reorder-tbody"><tr><td colspan="9" style="text-align:center;padding:24px;color:var(--ink-soft);">Loading…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="loading-overlay" id="load-proj-reorder"><div class="spinner"></div></div>
     </div>
   </div><!-- /#sale_orders-analytics -->
 
@@ -641,7 +697,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       </div>
       <!-- India Map + State/District Slicers -->
       <div style="display:flex;gap:16px;align-items:stretch;">
-        <div id="sv-india-map-wrap" style="position:relative;flex:1;min-width:0;height:510px;border-radius:16px;overflow:hidden;background:#fff;border:1px solid var(--line);">
+        <div id="sv-india-map-wrap" style="position:relative;flex:1;min-width:0;height:640px;border-radius:16px;overflow:hidden;background:#fff;border:1px solid var(--line);">
           <div id="sv-map-loader" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;z-index:50;">
             <div style="width:30px;height:30px;border:3px solid rgba(255,107,0,.2);border-top-color:var(--orange);border-radius:50%;animation:spin .8s linear infinite;"></div>
             <div style="font-size:11px;color:var(--ink-soft);font-weight:600;">Loading map…</div>
@@ -653,10 +709,12 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
           <button id="sv-map-back" onclick="svMapReset()" style="display:none;position:absolute;top:14px;left:16px;z-index:40;padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--panel);color:var(--orange);font-size:11.5px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px var(--shadow);align-items:center;gap:5px;">← All India</button>
 
-          <div style="position:absolute;bottom:12px;right:14px;display:flex;gap:8px;align-items:center;background:var(--panel);padding:5px 12px;border-radius:20px;border:1px solid var(--border);box-shadow:0 2px 8px var(--shadow);">
-            <span style="font-size:9.5px;color:var(--ink-soft);font-weight:600;">Order Volume</span>
-            <div style="width:70px;height:8px;border-radius:4px;background:linear-gradient(to right,#FFF1D8,#FFB52E,#FF6B00,#E83B12);"></div>
-            <span style="font-size:9px;color:var(--ink-soft);">Low → High</span>
+          <div style="position:absolute;top:14px;right:16px;z-index:40;display:flex;flex-direction:column;gap:6px;align-items:flex-start;background:var(--panel);padding:9px 14px;border-radius:12px;border:1px solid var(--border);box-shadow:0 2px 10px var(--shadow);">
+            <span style="font-size:11px;color:var(--ink-soft);font-weight:700;">Order Volume</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:100px;height:11px;border-radius:6px;background:linear-gradient(to right,#FFF1D8,#FFB52E,#FF6B00,#E83B12);"></div>
+              <span style="font-size:10px;color:var(--ink-soft);">Low → High</span>
+            </div>
           </div>
         </div>
 
@@ -706,6 +764,42 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
                 <div id="sv-info-rev" style="font-size:16px;font-weight:800;color:var(--orange);">—</div>
                 <div style="font-size:9px;color:var(--ink-soft);font-weight:600;margin-top:1px;">Revenue</div>
               </div>
+            </div>
+          </div>
+
+          <!-- All-India summary panel (shown when nothing is drilled into) -->
+          <div id="sv-info-allindia" style="background:var(--panel);border:1.5px solid rgba(255,107,0,.25);border-radius:12px;overflow:hidden;box-shadow:0 4px 16px var(--shadow);display:none;">
+            <div style="background:linear-gradient(135deg,#FF6B00,#E83B12);padding:12px 16px;color:#fff;">
+              <div style="font-size:15px;font-weight:800;">All India</div>
+              <div style="font-size:10px;opacity:.85;">Nationwide summary</div>
+            </div>
+            <div style="padding:12px 16px;display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;background:var(--cream,#F8F3EA);border-radius:8px;padding:8px 10px;">
+                <span style="font-size:10px;color:var(--ink-soft);font-weight:600;">States Covered</span>
+                <span id="sv-ai-states" style="font-size:14px;font-weight:800;color:var(--orange);">—</span>
+              </div>
+              <div style="background:var(--cream,#F8F3EA);border-radius:8px;padding:8px 10px;">
+                <div style="font-size:9.5px;color:var(--ink-soft);font-weight:600;margin-bottom:2px;">🏆 Highest Orders</div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                  <span id="sv-ai-top-orders-name" style="font-size:13px;font-weight:800;">—</span>
+                  <span id="sv-ai-top-orders-val" style="font-size:12px;font-weight:700;color:var(--orange);">—</span>
+                </div>
+              </div>
+              <div style="background:var(--cream,#F8F3EA);border-radius:8px;padding:8px 10px;">
+                <div style="font-size:9.5px;color:var(--ink-soft);font-weight:600;margin-bottom:2px;">💰 Highest Revenue</div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                  <span id="sv-ai-top-rev-name" style="font-size:13px;font-weight:800;">—</span>
+                  <span id="sv-ai-top-rev-val" style="font-size:12px;font-weight:700;color:var(--orange);">—</span>
+                </div>
+              </div>
+              <div style="background:var(--cream,#F8F3EA);border-radius:8px;padding:8px 10px;">
+                <div style="font-size:9.5px;color:var(--ink-soft);font-weight:600;margin-bottom:2px;">📦 Highest Units</div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                  <span id="sv-ai-top-units-name" style="font-size:13px;font-weight:800;">—</span>
+                  <span id="sv-ai-top-units-val" style="font-size:12px;font-weight:700;color:var(--orange);">—</span>
+                </div>
+              </div>
+              <div style="font-size:9px;color:var(--ink-soft);text-align:center;padding-top:2px;">Click any state to drill down →</div>
             </div>
           </div>
         </div>
@@ -1251,9 +1345,28 @@ document.querySelectorAll('.pill-toggle').forEach(group=>{
       // Restore new tab's filter state
       _restoreTabFilters(_activeTab);
       // Lazy-load Seller View on first visit
-      if(btn.dataset.view==='seller' && !window._svLoaded){
-        window._svLoaded=true;
-        loadSellerView();
+      if(btn.dataset.view==='seller'){
+        if(!window._svLoaded){
+          window._svLoaded=true;
+          loadSellerView();
+        } else {
+          // Data was preloaded while this tab was hidden — the map may have drawn at a
+          // stale fallback size. Now that the tab is actually visible, size it for real.
+          requestAnimationFrame(()=>{
+            const wrap=document.getElementById('sv-india-map-wrap');
+            if(wrap && _svMapGeo && wrap.clientWidth>50){
+              _svDrawMap(_svMapGeo, window._svStateMode||'orders');
+              _svPopulateStateDropdown(_svMapGeo); // safety net — fills it if the background poll hadn't yet
+              _svAttachResizeObserver();
+            }
+          });
+        }
+      }
+      // Lazy-load Projection view on first visit (btn.dataset.view==='analytics' — pill was renamed
+      // to "Projection" but keeps its internal key so the tab-switch/filter plumbing stays unchanged)
+      if(btn.dataset.view==='analytics' && !window._projLoaded){
+        window._projLoaded=true;
+        loadProjectionView();
       }
     });
   });
@@ -1605,12 +1718,18 @@ function initCharts(){
 
   // tatChart removed — canvas replaced by chartTATAdherenceViz in viz tab
 
-  tatDistChart=new Chart(document.getElementById('chartTATDist'),{
-    type:'bar',
-    data:{labels:['0-6h','6-12h','12-18h','18-24h','24-36h','36h+'],datasets:[{data:[0,0,0,0,0,0],backgroundColor:[GREEN,AMBER,ORANGE,ORANGE_DEEP,RED,'#8B0000'],borderRadius:6}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-      scales:{x:{grid:{display:false}},y:{grid:{color:LINE}}}}
-  });
+  // chartTATDist canvas lived on the old Analytics tab, now replaced by Projection —
+  // null-guarded (same pattern as chartTATAdherenceViz below) so initCharts() doesn't
+  // throw and abort the remaining chart initializations.
+  const _tatDistEl=document.getElementById('chartTATDist');
+  if(_tatDistEl){
+    tatDistChart=new Chart(_tatDistEl,{
+      type:'bar',
+      data:{labels:['0-6h','6-12h','12-18h','18-24h','24-36h','36h+'],datasets:[{data:[0,0,0,0,0,0],backgroundColor:[GREEN,AMBER,ORANGE,ORANGE_DEEP,RED,'#8B0000'],borderRadius:6}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{x:{grid:{display:false}},y:{grid:{color:LINE}}}}
+    });
+  }
 
   // TAT Distribution chart in Viz tab (mirrors analytics tab chart)
   // Wrapped in null check — if canvas doesn't exist, skip gracefully
@@ -1626,12 +1745,15 @@ function initCharts(){
     });
   }
 
-  courierSlaChart=new Chart(document.getElementById('chartCourierSla'),{
-    type:'bar',
-    data:{labels:[],datasets:[{data:[],backgroundColor:c=>{const v=parseFloat(c.raw);return v>=95?GREEN:v>=90?ORANGE:v>=85?AMBER:RED;},borderRadius:6,barThickness:22}]},
-    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-      scales:{x:{grid:{color:LINE},min:0,max:100},y:{grid:{display:false}}}}
-  });
+  const _courierSlaEl=document.getElementById('chartCourierSla');
+  if(_courierSlaEl){
+    courierSlaChart=new Chart(_courierSlaEl,{
+      type:'bar',
+      data:{labels:[],datasets:[{data:[],backgroundColor:c=>{const v=parseFloat(c.raw);return v>=95?GREEN:v>=90?ORANGE:v>=85?AMBER:RED;},borderRadius:6,barThickness:22}]},
+      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+        scales:{x:{grid:{color:LINE},min:0,max:100},y:{grid:{display:false}}}}
+    });
+  }
 }
 
 // ---- FILTER DROPDOWNS ----
@@ -2129,7 +2251,22 @@ const PANEL_INFO = {
   'SKU Profitability Waterfall':
     'Only for SKUs with cost_price data (coverage shown top-right). Revenue = SUM(total_price) of DELIVERED orders. Gross Margin = Revenue − Discount − COGS. COGS = SUM(cost_price × quantity) for delivered items. Logistics costs excluded from margin calculation.',
   'Daily Realized Revenue & Delivered Orders':
-    'DELIVERED status only (shipping_package_status_code = DELIVERED). Green filled area = realized revenue (raw ₹, formatted as k/L/Cr). Orange line = delivered order count. Left Y-axis = revenue, right Y-axis = orders. MTD = month-to-date, Last 30 = rolling 30 days, Last 90 = rolling 90 days.'
+    'DELIVERED status only (shipping_package_status_code = DELIVERED). Green filled area = realized revenue (raw ₹, formatted as k/L/Cr). Orange line = delivered order count. Left Y-axis = revenue, right Y-axis = orders. MTD = month-to-date, Last 30 = rolling 30 days, Last 90 = rolling 90 days.',
+  // ── Projection ───────────────────────────────────────────────────────
+  'Rolling Demand Trend + 30-Day Forecast':
+    'Solid line = actual daily orders (last 180 days). Dashed line = forecast, from a Level+Trend regression fit on all available days. Shaded band = ± MAD (the average forecast error measured via backtest). No seasonality applied yet — not enough history for it.',
+  'Monthly Volume Trend':
+    'Total orders grouped by calendar month. Shows the overall growth or decline shape month over month, without daily noise.',
+  'Day-of-Week Demand Pattern':
+    'Average orders per weekday across the full history. Helps spot which days consistently run higher/lower — useful for staffing and inventory timing.',
+  'Channel-wise Demand Trend':
+    'Monthly order volume per marketplace channel. Shows which channels are growing, flat, or shrinking relative to each other.',
+  'SKU Velocity Matrix':
+    'Your top 10 selling SKUs (by last-30-day orders). X = orders in the last 30 days, Y = growth % vs the prior 30 days. Rising Star = high volume + growing. Workhorse = high volume + stable. Emerging = low volume but growing fast. Review = low volume + declining. Dashed lines mark the median-volume and ±15% growth cutoffs among these top 10.',
+  'Discount vs Volume Lift':
+    'Bars = average daily orders at each discount band. Line = average revenue per order at that band. Shows whether deeper discounts actually move enough volume to offset the lower revenue per order.',
+  'Reorder Recommendation':
+    'Compares forecasted demand to current stock on hand. Safety Stock = Z × MAD (in units) × √(lead time), sized directly from the backtest forecast error — more volatile demand automatically gets a bigger safety buffer. Reorder Now = stock will run out before the assumed 7-day lead time.'
 };
 
 // ── Info (ⓘ) button injection + floating tooltip ─────────────────────
@@ -2234,11 +2371,13 @@ async function loadSaleOrders(){
     document.getElementById('kpi-shipments').textContent    = fmtCount(_kpiAllShipments);
     document.getElementById('kpi-fulfillment').textContent  = fmtPct(kpi.fulfillment_rate);
     document.getElementById('kpi-cancellation').textContent = fmtPct(kpi.cancellation_rate);
+    // kpi-aov/kpi-discount/kpi-tax cards lived on the old Analytics tab, now replaced by Projection —
+    // null-guarded since those elements no longer exist in the DOM.
     const aov=(parseFloat(kpi.total_revenue)||0)/(parseInt(kpi.total_orders)||1);
-    document.getElementById('kpi-aov').textContent     = fmtRev(aov);
+    if(document.getElementById('kpi-aov')) document.getElementById('kpi-aov').textContent = fmtRev(aov);
     const discPct=(parseFloat(kpi.total_discount)||0)*100/(parseFloat(kpi.total_revenue)||1);
-    document.getElementById('kpi-discount').textContent= fmtPct(discPct);
-    document.getElementById('kpi-tax').textContent     = fmtRev(kpi.total_tax);
+    if(document.getElementById('kpi-discount')) document.getElementById('kpi-discount').textContent = fmtPct(discPct);
+    if(document.getElementById('kpi-tax')) document.getElementById('kpi-tax').textContent = fmtRev(kpi.total_tax);
     const fEl=document.getElementById('kpi-fulfillment');
     fEl.style.backgroundImage=parseFloat(kpi.fulfillment_rate)>=90?'linear-gradient(135deg,#166534,#15803D)':'linear-gradient(135deg,#991B1B,#DC2626)';
   }
@@ -2323,9 +2462,11 @@ tatChart.update(); }
   if(tatDist && tatDist.length){
     const distLabels=tatDist.map(r=>r.bucket);
     const distVals=tatDist.map(r=>parseInt(r.orders)||0);
-    tatDistChart.data.labels=distLabels;
-    tatDistChart.data.datasets[0].data=distVals;
-    tatDistChart.update();
+    if(tatDistChart){
+      tatDistChart.data.labels=distLabels;
+      tatDistChart.data.datasets[0].data=distVals;
+      tatDistChart.update();
+    }
     // Mirror to viz tab TAT distribution panel
     if(window.tatAdherenceVizChart){
       window.tatAdherenceVizChart.data.labels=distLabels;
@@ -2336,7 +2477,7 @@ tatChart.update(); }
   hideLoader('load-tatdist');
   hideLoader('load-tat-viz'); // always hide, even if no data
 
-  if(courierSla && courierSla.length){
+  if(courierSla && courierSla.length && courierSlaChart){
     courierSlaChart.data.labels=courierSla.map(r=>r.courier);
     courierSlaChart.data.datasets[0].data=courierSla.map(r=>parseFloat(r.sla_pct)||0);
     courierSlaChart.update();
@@ -2347,9 +2488,9 @@ tatChart.update(); }
   ['load-trend','load-cod','load-shiptype','load-client','load-courier',
    'load-sku','load-cat','load-tat-tbl','load-tatdist','load-couriersla','load-tat-viz'].forEach(hideLoader);
 
-  // insights
-  if(kpi){
-    const ins=document.getElementById('insights-so');
+  // insights — 'insights-so' panel lived on the old Analytics tab, now replaced by Projection
+  const ins=document.getElementById('insights-so');
+  if(kpi && ins){
     ins.innerHTML='';
     const items=[];
     if(parseFloat(kpi.cancellation_rate)>5) items.push({i:'⚠️',t:`Cancellation rate at ${fmtPct(kpi.cancellation_rate)} — above 5% threshold`,p:'Review unfulfillable order root causes and channel-level cancellation patterns.'});
@@ -3664,9 +3805,59 @@ function svRenderIndiaMap(metric){
   _svLoadGeo().then(geo=>{
     if(!geo){ document.getElementById('sv-map-loader').innerHTML='<div style="color:var(--orange);font-size:12px;font-weight:600;">⚠ Map requires internet connection</div>'; return; }
     document.getElementById('sv-map-loader').style.display='none';
+    const wrap=document.getElementById('sv-india-map-wrap');
+    if(wrap && wrap.offsetParent===null){
+      // Tab is hidden right now (e.g. eager preload before user opens Seller View) —
+      // wait until it's actually visible so clientWidth/clientHeight are real, then draw.
+      _svWaitUntilVisibleThenDraw(geo, metric);
+      return;
+    }
     _svDrawMap(geo, metric);
     _svPopulateStateDropdown(geo);
   });
+}
+
+// Poll (cheap, short-lived) until the Seller View container is actually visible/sized,
+// then draw the map once with correct real dimensions. Also re-attaches a ResizeObserver
+// so a later container resize (e.g. window resize) redraws crisply instead of stretching.
+function _svWaitUntilVisibleThenDraw(geo, metric){
+  const wrap=document.getElementById('sv-india-map-wrap');
+  if(!wrap) return;
+  let tries=0;
+  const check=()=>{
+    tries++;
+    if(wrap.offsetParent!==null && wrap.clientWidth>50 && wrap.clientHeight>50){
+      _svDrawMap(geo, metric);
+      _svPopulateStateDropdown(geo);
+      _svAttachResizeObserver();
+      return;
+    }
+    requestAnimationFrame(check); // cheap check, keeps going indefinitely until the tab is opened
+  };
+  requestAnimationFrame(check);
+}
+
+let _svResizeObserverAttached=false;
+function _svAttachResizeObserver(){
+  if(_svResizeObserverAttached || typeof ResizeObserver==='undefined') return;
+  const wrap=document.getElementById('sv-india-map-wrap');
+  if(!wrap) return;
+  _svResizeObserverAttached=true;
+  let lastW=wrap.clientWidth, lastH=wrap.clientHeight, raf=null;
+  const ro=new ResizeObserver(()=>{
+    if(raf) cancelAnimationFrame(raf);
+    raf=requestAnimationFrame(()=>{
+      if(_svAnimating) return; // never redraw the full map mid zoom-transition — that's the jank source
+      const w=wrap.clientWidth, h=wrap.clientHeight;
+      if(Math.abs(w-lastW)<4 && Math.abs(h-lastH)<4) return; // ignore tiny jitter
+      lastW=w; lastH=h;
+      if(w>50 && h>50 && _svMapGeo){
+        _svDrawMap(_svMapGeo, window._svStateMode||'orders');
+        if(_svMapCurrentState) svSelectState(_svMapCurrentState);
+      }
+    });
+  });
+  ro.observe(wrap);
 }
 
 function _svPopulateStateDropdown(geo){
@@ -3686,10 +3877,12 @@ function _svDrawMap(geo, metric){
 
   svg.attr('viewBox',`0 0 ${W} ${H}`);
 
-  // Bigger padding (90px) leaves a clean ring around the landmass for outside labels
-  const pad=92;
+  // Tight top/bottom padding (map is tall — India's landmass is much taller than wide,
+  // so vertical space should go to the map, not blank margin); a bit more on the sides
+  // for state labels to sit in.
+  const padX=64, padY=22;
   _svMapProj=d3.geoMercator();
-  _svMapProj.fitExtent([[pad,pad],[W-pad,H-pad]], geo);
+  _svMapProj.fitExtent([[padX,padY],[W-padX,H-padY]], geo);
   _svMapPath=d3.geoPath().projection(_svMapProj);
 
   svg.selectAll('*').remove();
@@ -3733,58 +3926,121 @@ function _svDrawMap(geo, metric){
     .on('click',function(e,d){ svSelectState(_svStateName(d)); });
 
   _svRenderStateLabels(geo, data, metricKey, W, H);
+  if(!_svMapCurrentState) _svShowAllIndiaInfo(data);
 }
 
-// ── Leader-line labels: placed OUTSIDE the landmass on a ring, connected by a thin line ──
+// ── Labels sit CLOSE to their state (short leader line just outside the border) ──
+// Curated per-state label placement — user-specified which states read cleaner as an
+// outside leader-line label (small/cluster-prone states) vs an inside label (large states
+// with enough room in their own polygon).
+const SV_LABEL_PLACEMENT={
+  'delhi':'outside','haryana':'outside','punjab':'outside','chhattisgarh':'outside',
+  'jharkhand':'outside','kerala':'outside',
+  'uttar pradesh':'inside','bihar':'inside','assam':'inside','rajasthan':'inside',
+  'madhya pradesh':'inside','maharashtra':'inside','andhra pradesh':'inside',
+  'tamil nadu':'inside','gujarat':'inside'
+};
+
 function _svRenderStateLabels(geo, data, metricKey, W, H){
   const labelsEl=document.getElementById('sv-labels-layer');
   const linesEl =document.getElementById('sv-leader-lines');
   labelsEl.innerHTML=''; linesEl.innerHTML='';
 
   const cx=W/2, cy=H*0.46;
-  const ringR = Math.min(W,H)/2 - 6;
+  const LEADER_LEN=22; // short offset from the state's own edge, not a big outer ring
 
-  const top=[...data].sort((a,b)=>(parseFloat(b[metricKey])||0)-(parseFloat(a[metricKey])||0)).slice(0,13);
-  const items=[];
-  top.forEach(d=>{
-    const feat=geo.features.find(f=>_svStateName(f)===d.state);
+  const dataByState={};
+  data.forEach(d=>{ dataByState[(d.state||'').trim().toLowerCase()]=d; });
+
+  const outsideItems=[], insideItems=[];
+  Object.keys(SV_LABEL_PLACEMENT).forEach(key=>{
+    const feat=geo.features.find(f=>(_svStateName(f)||'').trim().toLowerCase()===key);
     if(!feat) return;
+    const d=dataByState[key];
+    const val=d?(parseFloat(d[metricKey])||0):0;
+    const stateName=_svStateName(feat);
     const [bx,by]=_svMapPath.centroid(feat);
     if(isNaN(bx)||isNaN(by)) return;
-    const angle=Math.atan2(by-cy,bx-cx);
-    items.push({state:d.state,val:parseFloat(d[metricKey])||0,bx,by,angle});
-  });
-  // Sort by angle for even distribution, alternate radius slightly to reduce collisions
-  items.sort((a,b)=>a.angle-b.angle);
-  items.forEach((it,i)=>{
-    const r = ringR - (i%2===0?0:14);
-    const lx = cx + r*Math.cos(it.angle);
-    const ly = cy + r*Math.sin(it.angle);
-    const clampedX = Math.max(50, Math.min(W-50, lx));
-    const clampedY = Math.max(16, Math.min(H-16, ly));
 
-    // Leader line
+    if(SV_LABEL_PLACEMENT[key]==='inside'){
+      insideItems.push({state:stateName,val,bx,by});
+      return;
+    }
+    const [[x0,y0],[x1,y1]]=_svMapPath.bounds(feat);
+    // Direction outward from the map center through this state's centroid —
+    // used only to nudge the label just past the state's own edge, not far away.
+    const dx=bx-cx, dy=by-cy;
+    const dist=Math.hypot(dx,dy)||1;
+    const ux=dx/dist, uy=dy/dist;
+    const halfW=(x1-x0)/2, halfH=(y1-y0)/2;
+    const edgeDist=Math.max(halfW*Math.abs(ux), halfH*Math.abs(uy)) || Math.min(halfW,halfH,20);
+    const lx=bx+ux*(edgeDist*0.55+LEADER_LEN);
+    const ly=by+uy*(edgeDist*0.55+LEADER_LEN);
+    outsideItems.push({state:stateName,val,bx,by,lx,ly});
+  });
+
+  // Iterative rectangle-aware relaxation for the outside-labeled cluster only (Delhi/Haryana/
+  // Punjab in the north, Kerala near the south tip, etc.) — several passes, pushing along
+  // whichever axis has the smaller overlap so boxes actually stop overlapping.
+  const LW=64, LH=26;
+  for(let pass=0; pass<24; pass++){
+    let moved=false;
+    for(let i=0;i<outsideItems.length;i++){
+      for(let j=i+1;j<outsideItems.length;j++){
+        const a=outsideItems[i], b=outsideItems[j];
+        const dx=b.lx-a.lx, dy=b.ly-a.ly;
+        const overlapX=LW-Math.abs(dx), overlapY=LH-Math.abs(dy);
+        if(overlapX>0 && overlapY>0){
+          moved=true;
+          if(overlapX<overlapY){
+            const push=overlapX/2*(dx>=0?1:-1);
+            a.lx-=push; b.lx+=push;
+          } else {
+            const push=overlapY/2*(dy>=0?1:-1)||1.5;
+            a.ly-=push; b.ly+=push;
+          }
+        }
+      }
+    }
+    if(!moved) break;
+  }
+
+  const fmtVal=v=>metricKey==='orders'||metricKey==='units'?fmtCount(v):metricKey==='revenue'?fmtRev(v):v.toFixed(1)+'%';
+
+  outsideItems.forEach(it=>{
+    const clampedX=Math.max(44,Math.min(W-44,it.lx));
+    const clampedY=Math.max(14,Math.min(H-14,it.ly));
+
     const line=document.createElementNS('http://www.w3.org/2000/svg','line');
     line.setAttribute('x1',it.bx); line.setAttribute('y1',it.by);
     line.setAttribute('x2',clampedX); line.setAttribute('y2',clampedY);
-    line.setAttribute('stroke','rgba(255,107,0,.4)'); line.setAttribute('stroke-width','1');
-    line.setAttribute('stroke-dasharray','2,2');
+    line.setAttribute('stroke','rgba(255,107,0,.45)'); line.setAttribute('stroke-width','1');
     linesEl.appendChild(line);
     const dot=document.createElementNS('http://www.w3.org/2000/svg','circle');
-    dot.setAttribute('cx',it.bx); dot.setAttribute('cy',it.by); dot.setAttribute('r','2.5');
+    dot.setAttribute('cx',it.bx); dot.setAttribute('cy',it.by); dot.setAttribute('r','2.2');
     dot.setAttribute('fill','#FF6B00');
     linesEl.appendChild(dot);
 
-    // Label
     const label=document.createElement('div');
     label.className='sv-map-label';
     label.style.cssText=`position:absolute;left:${clampedX}px;top:${clampedY}px;transform:translate(-50%,-50%);
-      background:rgba(255,255,255,.96);border:1px solid rgba(255,140,60,.35);
-      border-radius:7px;padding:2px 7px;font-size:9px;font-weight:700;color:#202020;
-      white-space:nowrap;box-shadow:0 2px 6px rgba(120,80,20,.15);pointer-events:none;
-      transition:opacity .2s;`;
-    const fmt=metricKey==='orders'||metricKey==='units'?fmtCount(it.val):metricKey==='revenue'?fmtRev(it.val):it.val.toFixed(1)+'%';
-    label.innerHTML=`${it.state}<br><span style="color:#FF6B00;font-size:10px;">${fmt}</span>`;
+      background:rgba(255,255,255,.97);border:1px solid rgba(255,140,60,.35);
+      border-radius:6px;padding:1.5px 6px;font-size:8.5px;font-weight:700;color:#202020;
+      white-space:nowrap;box-shadow:0 2px 5px rgba(120,80,20,.15);pointer-events:none;
+      transition:opacity .2s;line-height:1.25;`;
+    label.innerHTML=`${it.state}<br><span style="color:#FF6B00;font-size:9.5px;">${fmtVal(it.val)}</span>`;
+    labelsEl.appendChild(label);
+  });
+
+  insideItems.forEach(it=>{
+    const label=document.createElement('div');
+    label.className='sv-map-label';
+    label.style.cssText=`position:absolute;left:${it.bx}px;top:${it.by}px;transform:translate(-50%,-50%);
+      background:rgba(255,255,255,.94);border:1px solid rgba(255,140,60,.4);
+      border-radius:6px;padding:1.5px 6px;font-size:8.5px;font-weight:700;color:#202020;
+      white-space:nowrap;box-shadow:0 2px 5px rgba(120,80,20,.15);pointer-events:none;
+      transition:opacity .2s;line-height:1.25;text-align:center;`;
+    label.innerHTML=`${it.state}<br><span style="color:#FF6B00;font-size:9.5px;">${fmtVal(it.val)}</span>`;
     labelsEl.appendChild(label);
   });
 }
@@ -3816,13 +4072,35 @@ function svSelectState(name){
   // Fade labels out fast, then CSS-transition the map zoom (GPU-composited, no per-frame JS)
   document.getElementById('sv-labels-layer').style.opacity='0';
   document.getElementById('sv-leader-lines').style.opacity='0';
-  d3.select('#sv-map-g').transition().duration(450).ease(d3.easeCubicInOut)
+  _svAnimating=true;
+  d3.select('#sv-map-g').transition().duration(260).ease(d3.easeCubicOut)
     .attr('transform',`translate(${tx},${ty}) scale(${k})`)
-    .on('end',()=>{ _svMapTransform={x:tx,y:ty,k}; });
+    .on('end',()=>{
+      _svMapTransform={x:tx,y:ty,k};
+      _svAnimating=false;
+      // Draw districts only once the zoom has settled — keeps the transition itself
+      // butter-smooth (no heavy path re-render competing with the CSS animation).
+      if(_svMapCurrentState===name) _svRenderReadyDistricts(name);
+    });
 
   document.getElementById('sv-map-back').style.display='flex';
-  _svLoadDistrictsFor(name);
+  // Kick off data/geo fetch in parallel with the animation, but stash the result —
+  // don't paint it until the transition's 'end' fires above.
+  _svLoadDistrictsFor(name, /*deferPaint=*/true);
+  document.getElementById('sv-info-allindia').style.display='none';
   _svUpdateInfoPanel('state', name);
+}
+
+let _svPendingDistricts=null;
+function _svRenderReadyDistricts(stateName){
+  if(_svPendingDistricts && _svPendingDistricts.state===stateName){
+    _svDrawDistricts(stateName, _svPendingDistricts.data);
+    _svPopulateDistrictDropdown(stateName, _svPendingDistricts.data);
+    _svPendingDistricts=null;
+  } else {
+    // Data not back yet — draw as soon as it arrives instead of blocking the zoom.
+    _svLoadDistrictsFor(stateName, false);
+  }
 }
 
 function _svPopulateDistrictDropdown(stateName, distData){
@@ -3843,11 +4121,17 @@ function _svPopulateDistrictDropdown(stateName, distData){
 
 let _svDistrictDataCache={};
 
-function _svLoadDistrictsFor(stateName){
+function _svLoadDistrictsFor(stateName, deferPaint){
   const geoP=_svLoadDistrictGeo();
   const dataP=_svDistrictDataCache[stateName] ? Promise.resolve(_svDistrictDataCache[stateName])
     : fetchData('seller_by_district', {state: stateName}).then(d=>{ _svDistrictDataCache[stateName]=d||[]; return d||[]; }).catch(()=>[]);
   Promise.all([geoP, dataP]).then(([geo, distData])=>{
+    if(_svMapCurrentState!==stateName) return; // user moved on to a different state — drop stale result
+    if(deferPaint){
+      // Stash for _svRenderReadyDistricts to pick up once the zoom transition ends.
+      _svPendingDistricts={state:stateName, data:distData||[]};
+      return;
+    }
     _svDrawDistricts(stateName, distData||[]);
     _svPopulateDistrictDropdown(stateName, distData||[]);
   });
@@ -3901,48 +4185,30 @@ function _svDrawDistricts(stateName, distData){
     .on('click',function(e,d){ svSelectDistrict(d.properties.NAME_2||d.properties.district||''); })
     .on('mouseleave',function(){ d3.select(this).attr('stroke-width',.5/(_svMapTransform.k||1)); document.getElementById('sv-map-tooltip').style.display='none'; });
 
-  // District leader-line labels — top 8 by orders
+  // District labels sit INSIDE each district polygon — no leader lines, cleaner look
   const labelsEl=document.getElementById('sv-labels-layer');
   const linesEl =document.getElementById('sv-leader-lines');
-  labelsEl.innerHTML=''; linesEl.innerHTML='';
-  const wrap=document.getElementById('sv-india-map-wrap');
-  const W=wrap.clientWidth, H=wrap.clientHeight;
-  const cx=W/2, cy=H/2, ringR=Math.min(W,H)/2-8;
+  labelsEl.innerHTML=''; linesEl.innerHTML=''; // no leader lines in district view
 
   const topDist=[...dists].map(d=>{
     const n=(d.properties.NAME_2||d.properties.district||'').trim().toUpperCase();
     return {feat:d, info:distMap[n]||{orders:0}, name:d.properties.NAME_2||d.properties.district||''};
   }).filter(x=>x.info.orders>0).sort((a,b)=>b.info.orders-a.info.orders).slice(0,8);
 
-  const items=topDist.map(({feat,info,name})=>{
+  topDist.forEach(({feat,info,name})=>{
     const [bx0,by0]=_svMapPath.centroid(feat);
-    // Transform base coords into current zoomed screen space
+    // Transform base coords into current zoomed screen space — label sits right at the centroid
     const bx=_svMapTransform.x + _svMapTransform.k*bx0;
     const by=_svMapTransform.y + _svMapTransform.k*by0;
-    const angle=Math.atan2(by-cy,bx-cx);
-    return {name,info,bx,by,angle};
-  }).filter(it=>!isNaN(it.bx));
-  items.sort((a,b)=>a.angle-b.angle);
-
-  items.forEach((it,i)=>{
-    const r=ringR-(i%2===0?0:12);
-    const lx=cx+r*Math.cos(it.angle), ly=cy+r*Math.sin(it.angle);
-    const clampedX=Math.max(50,Math.min(W-50,lx)), clampedY=Math.max(16,Math.min(H-16,ly));
-
-    const line=document.createElementNS('http://www.w3.org/2000/svg','line');
-    line.setAttribute('x1',it.bx); line.setAttribute('y1',it.by);
-    line.setAttribute('x2',clampedX); line.setAttribute('y2',clampedY);
-    line.setAttribute('stroke','rgba(255,107,0,.4)'); line.setAttribute('stroke-width','1');
-    line.setAttribute('stroke-dasharray','2,2');
-    linesEl.appendChild(line);
+    if(isNaN(bx)||isNaN(by)) return;
 
     const label=document.createElement('div');
     label.className='sv-map-label';
-    label.style.cssText=`position:absolute;left:${clampedX}px;top:${clampedY}px;transform:translate(-50%,-50%);
-      background:rgba(255,255,255,.96);border:1px solid rgba(255,140,60,.35);border-radius:7px;
-      padding:2px 7px;font-size:9px;font-weight:700;color:#202020;white-space:nowrap;
-      box-shadow:0 2px 6px rgba(120,80,20,.15);pointer-events:none;`;
-    label.innerHTML=`${it.name}<br><span style="color:#FF6B00;font-size:10px;">${fmtCount(it.info.orders)} · ${fmtRev(it.info.revenue)}</span>`;
+    label.style.cssText=`position:absolute;left:${bx}px;top:${by}px;transform:translate(-50%,-50%);
+      background:rgba(255,255,255,.94);border:1px solid rgba(255,140,60,.4);border-radius:6px;
+      padding:1.5px 6px;font-size:8.5px;font-weight:700;color:#202020;white-space:nowrap;
+      box-shadow:0 2px 5px rgba(120,80,20,.15);pointer-events:none;text-align:center;line-height:1.25;`;
+    label.innerHTML=`${name}<br><span style="color:#FF6B00;font-size:9.5px;">${fmtCount(info.orders)} · ${fmtRev(info.revenue)}</span>`;
     labelsEl.appendChild(label);
   });
 
@@ -3983,6 +4249,29 @@ function svInfoClose(){
   svMapReset();
 }
 
+// ── All-India summary panel (shown when nothing is drilled into) ──
+function _svShowAllIndiaInfo(data){
+  document.getElementById('sv-info-panel').style.display='none';
+  const panel=document.getElementById('sv-info-allindia');
+  if(!panel) return;
+  const rows=(data&&data.length?data:_svStateData||[]).map(d=>({
+    state:d.state, orders:parseInt(d.orders)||0, units:parseInt(d.units)||0, revenue:parseFloat(d.revenue)||0
+  }));
+  if(!rows.length){ panel.style.display='none'; return; }
+  const covered=rows.filter(r=>r.orders>0).length;
+  const topOrders=[...rows].sort((a,b)=>b.orders-a.orders)[0];
+  const topRev=[...rows].sort((a,b)=>b.revenue-a.revenue)[0];
+  const topUnits=[...rows].sort((a,b)=>b.units-a.units)[0];
+  document.getElementById('sv-ai-states').textContent=covered;
+  document.getElementById('sv-ai-top-orders-name').textContent=topOrders.state;
+  document.getElementById('sv-ai-top-orders-val').textContent=fmtCount(topOrders.orders);
+  document.getElementById('sv-ai-top-rev-name').textContent=topRev.state;
+  document.getElementById('sv-ai-top-rev-val').textContent=fmtRev(topRev.revenue);
+  document.getElementById('sv-ai-top-units-name').textContent=topUnits.state;
+  document.getElementById('sv-ai-top-units-val').textContent=fmtCount(topUnits.units);
+  panel.style.display='block';
+}
+
 function svMapReset(){
   _svMapCurrentState=null;
   const sel=document.getElementById('sv-state-select'); if(sel) sel.value='';
@@ -3991,27 +4280,38 @@ function svMapReset(){
   document.getElementById('sv-info-panel').style.display='none';
 
   d3.select('#sv-india-map').selectAll('.sv-state').attr('stroke','#fff').attr('stroke-width',.7);
+  // Remove district paths right away (cheap) so they don't sit around mid-transition
   d3.select('#sv-india-map').selectAll('.sv-district').remove();
+  _svPendingDistricts=null;
 
   document.getElementById('sv-labels-layer').style.opacity='0';
   document.getElementById('sv-leader-lines').style.opacity='0';
 
-  d3.select('#sv-map-g').transition().duration(450).ease(d3.easeCubicInOut)
-    .attr('transform','translate(0,0) scale(1)')
-    .on('end',()=>{
-      _svMapTransform={x:0,y:0,k:1};
-      if(_svMapGeo){
-        const data=_svStateData.length?_svStateData:[];
-        const metricKey=window._svStateMode==='return_rate'?'return_rate':window._svStateMode==='revenue'?'revenue':window._svStateMode==='units'?'units':'orders';
-        const wrap=document.getElementById('sv-india-map-wrap');
-        _svRenderStateLabels(_svMapGeo, data, metricKey, wrap.clientWidth, wrap.clientHeight);
-        document.getElementById('sv-labels-layer').style.opacity='1';
-        document.getElementById('sv-leader-lines').style.opacity='1';
-      }
+  // State-label positions are computed in the map's BASE coordinate space (unaffected by the
+  // g's zoom transform), so we don't need to wait for the transition to finish before drawing
+  // them — render immediately and cross-fade in while the map zooms out. Feels instant.
+  _svAnimating=true;
+  if(_svMapGeo){
+    const data=_svStateData.length?_svStateData:[];
+    const metricKey=window._svStateMode==='return_rate'?'return_rate':window._svStateMode==='revenue'?'revenue':window._svStateMode==='units'?'units':'orders';
+    const wrap=document.getElementById('sv-india-map-wrap');
+    _svRenderStateLabels(_svMapGeo, data, metricKey, wrap.clientWidth, wrap.clientHeight);
+    requestAnimationFrame(()=>{
+      document.getElementById('sv-labels-layer').style.transition='opacity .25s';
+      document.getElementById('sv-leader-lines').style.transition='opacity .25s';
+      document.getElementById('sv-labels-layer').style.opacity='1';
+      document.getElementById('sv-leader-lines').style.opacity='1';
     });
+    _svShowAllIndiaInfo(data);
+  }
+
+  d3.select('#sv-map-g').transition().duration(260).ease(d3.easeCubicOut)
+    .attr('transform','translate(0,0) scale(1)')
+    .on('end',()=>{ _svMapTransform={x:0,y:0,k:1}; _svAnimating=false; });
 
   document.getElementById('sv-map-back').style.display='none';
 }
+let _svAnimating=false;
 
 function svRenderStateChart(m){
   if(typeof d3==='undefined'){ setTimeout(()=>svRenderIndiaMap(m||'orders'),500); return; }
@@ -4086,11 +4386,331 @@ function svRenderDailyTrend(d){
 
 // Re-load seller view when filters change (if it's the active tab)
 const _origLoadSO=typeof loadSaleOrders==='function'?loadSaleOrders:null;
+// ════════════════════════════════════════════════════════════
+// PROJECTION VIEW — Level+Trend forecasting, 3-vs-3 backtest (MAD),
+// SKU velocity quadrants, discount lift, inventory reorder recommendations.
+// All math done client-side from raw aggregates fetched via fetchData().
+// ════════════════════════════════════════════════════════════
+window._projLoaded=false;
+let _projCharts={};
+const PROJ_DOW_NAMES=['','Sun','Mon','Tue','Wed','Thu','Fri','Sat']; // BQ DAYOFWEEK: 1=Sun
+
+// Simple least-squares linear regression: y = a + b*x, x = 0..n-1
+function _projLinReg(ys){
+  const n=ys.length; if(!n) return {a:0,b:0};
+  let sx=0,sy=0,sxx=0,sxy=0;
+  for(let i=0;i<n;i++){ sx+=i; sy+=ys[i]; sxx+=i*i; sxy+=i*ys[i]; }
+  const denom=(n*sxx - sx*sx)||1;
+  const b=(n*sxy - sx*sy)/denom;
+  const a=(sy - b*sx)/n;
+  return {a,b};
+}
+
+async function loadProjectionView(){
+  showLoader('load-proj-trend'); showLoader('load-proj-monthly'); showLoader('load-proj-dow');
+  showLoader('load-proj-channel'); showLoader('load-proj-velocity'); showLoader('load-proj-discount');
+  showLoader('load-proj-reorder');
+
+  const [daily, monthly, dow, channel, velocity, discount, reorder] = await Promise.all([
+    fetchData('projection_daily_trend'),
+    fetchData('projection_monthly_trend'),
+    fetchData('projection_dow_pattern'),
+    fetchData('projection_channel_trend'),
+    fetchData('projection_sku_velocity'),
+    fetchData('projection_discount_lift'),
+    fetchData('projection_inventory_reorder'),
+  ]);
+
+  const dailyRows=(daily||[]).map(r=>({date:r.date,orders:parseInt(r.orders)||0,units:parseInt(r.units)||0,revenue:parseFloat(r.revenue)||0}))
+    .sort((a,b)=>a.date<b.date?-1:1);
+
+  // ── 3-vs-3 (or N-vs-N, whatever's available) backtest: split into two halves,
+  // fit Level+Trend on the earlier half, forecast the later half, measure MAD ──
+  let mad=0, madUnits=0, runRate=0, trendPct=0, forecastBase=0, forecastLow=0, forecastHigh=0;
+  let unitsPerOrder=1;
+  if(dailyRows.length>=10){
+    const half=Math.floor(dailyRows.length/2);
+    const blockA=dailyRows.slice(0,half), blockB=dailyRows.slice(half);
+    const regA=_projLinReg(blockA.map(d=>d.orders));
+    const errors=blockB.map((d,i)=>d.orders-(regA.a+regA.b*(half+i)));
+    mad=errors.reduce((s,e)=>s+Math.abs(e),0)/(errors.length||1);
+
+    const avgA=blockA.reduce((s,d)=>s+d.orders,0)/(blockA.length||1);
+    const avgB=blockB.reduce((s,d)=>s+d.orders,0)/(blockB.length||1);
+    trendPct=avgA>0?((avgB-avgA)/avgA*100):0;
+
+    const last30=dailyRows.slice(-30);
+    runRate=last30.reduce((s,d)=>s+d.orders,0)/(last30.length||1);
+
+    const totalUnits=dailyRows.reduce((s,d)=>s+d.units,0), totalOrders=dailyRows.reduce((s,d)=>s+d.orders,0);
+    unitsPerOrder=totalOrders>0?totalUnits/totalOrders:1;
+    madUnits=mad*unitsPerOrder;
+
+    // Full-data regression for the forward-looking 30-day projection
+    const regAll=_projLinReg(dailyRows.map(d=>d.orders));
+    const n=dailyRows.length;
+    let base30=0;
+    for(let i=1;i<=30;i++) base30+=Math.max(0, regAll.a+regAll.b*(n-1+i));
+    forecastBase=base30;
+    const band=mad*Math.sqrt(30);
+    forecastLow=Math.max(0, base30-band); forecastHigh=base30+band;
+  }
+
+  document.getElementById('proj-runrate').textContent=fmtCount(Math.round(runRate));
+  document.getElementById('proj-trend').textContent=(trendPct>=0?'+':'')+trendPct.toFixed(1)+'%';
+  document.getElementById('proj-trend-delta').innerHTML=`<span class="base">${trendPct>=0?'growing':'declining'} vs prior period</span>`;
+  document.getElementById('proj-mad').textContent='±'+fmtCount(Math.round(mad))+'/day';
+  document.getElementById('proj-forecast').textContent=fmtCount(Math.round(forecastBase));
+  document.getElementById('proj-forecast-band').innerHTML=`Low ${fmtCount(Math.round(forecastLow))} – High ${fmtCount(Math.round(forecastHigh))}`;
+
+  // Discount Lift Ratio KPI — weighted revenue/order change per 1% discount vs the 0% baseline
+  const discRows=(discount||[]).map(r=>({bucket:r.discount_bucket,orders:parseInt(r.orders)||0,
+    avgDaily:parseFloat(r.avg_daily_orders)||0,avgRev:parseFloat(r.avg_revenue_per_order)||0}));
+  const bucketMid={'0%':0,'1-10%':5,'11-20%':15,'21-30%':25,'30%+':35};
+  const baseline=discRows.find(r=>r.bucket==='0%');
+  let liftRatio=0;
+  if(discRows.length && baseline){
+    const totalOrders=discRows.reduce((s,r)=>s+r.orders,0)||1;
+    const weightedDisc=discRows.reduce((s,r)=>s+r.orders*(bucketMid[r.bucket]||0),0)/totalOrders;
+    const weightedRev=discRows.reduce((s,r)=>s+r.orders*r.avgRev,0)/totalOrders;
+    liftRatio=weightedDisc>0?(weightedRev-baseline.avgRev)/weightedDisc:0;
+  }
+  document.getElementById('proj-disclift').textContent=(liftRatio>=0?'+':'')+fmtRev(liftRatio).replace('₹','₹');
+
+  hideLoader('load-proj-trend'); hideLoader('load-proj-monthly'); hideLoader('load-proj-dow');
+  hideLoader('load-proj-channel'); hideLoader('load-proj-velocity'); hideLoader('load-proj-discount');
+  hideLoader('load-proj-reorder');
+
+  _projRenderTrendChart(dailyRows, mad);
+  _projRenderMonthlyChart(monthly||[]);
+  _projRenderDowChart(dow||[]);
+  _projRenderChannelChart(channel||[]);
+  _projRenderVelocityChart(velocity||[]);
+  _projRenderDiscountChart(discRows);
+  _projRenderReorderTable(reorder||[], madUnits);
+}
+
+const PROJ_MON_NAMES=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+function _projFmtDayLabel(iso){
+  // iso = 'YYYY-MM-DD' -> '04 Feb'
+  const parts=(iso||'').split('-'); if(parts.length<3) return iso;
+  const m=parseInt(parts[1],10)-1;
+  return parts[2]+' '+(PROJ_MON_NAMES[m]?PROJ_MON_NAMES[m][0]+PROJ_MON_NAMES[m].slice(1).toLowerCase():'');
+}
+function _projFmtMonthLabel(ym){
+  // ym = 'YYYY-MM' -> "JAN'26"
+  const parts=(ym||'').split('-'); if(parts.length<2) return ym;
+  const m=parseInt(parts[1],10)-1;
+  return (PROJ_MON_NAMES[m]||'')+"'"+parts[0].slice(-2);
+}
+function _projRenderTrendChart(dailyRows, mad){
+  const labels=dailyRows.map(d=>d.date);
+  const actual=dailyRows.map(d=>d.orders);
+  // 30-day forward forecast appended after the actual series
+  const regAll=_projLinReg(dailyRows.map(d=>d.orders));
+  const n=dailyRows.length;
+  const fcLabels=[], fcVals=[], fcLow=[], fcHigh=[];
+  for(let i=1;i<=30;i++){
+    const d=new Date(dailyRows[n-1]?.date||Date.now()); d.setDate(d.getDate()+i);
+    fcLabels.push(d.toISOString().slice(0,10));
+    const v=Math.max(0,regAll.a+regAll.b*(n-1+i));
+    fcVals.push(v); fcLow.push(Math.max(0,v-mad)); fcHigh.push(v+mad);
+  }
+  const allLabels=[...labels, ...fcLabels];
+  const actualPadded=[...actual, ...Array(30).fill(null)];
+  const forecastPadded=[...Array(Math.max(0,n-1)).fill(null), actual[n-1]??null, ...fcVals];
+  const bandLow=[...Array(Math.max(0,n-1)).fill(null), actual[n-1]??null, ...fcLow];
+  const bandHigh=[...Array(Math.max(0,n-1)).fill(null), actual[n-1]??null, ...fcHigh];
+
+  if(_projCharts.trend) _projCharts.trend.destroy();
+  _projCharts.trend=new Chart(document.getElementById('chartProjTrend'),{
+    type:'line',
+    data:{labels:allLabels,datasets:[
+      {label:'Actual Orders',data:actualPadded,borderColor:ORANGE,backgroundColor:'transparent',borderWidth:2.2,pointRadius:0,pointHitRadius:14,pointHoverRadius:5,pointHoverBackgroundColor:ORANGE,tension:.25},
+      {label:'High',data:bandHigh,borderColor:'transparent',backgroundColor:'rgba(255,106,50,.12)',pointRadius:0,pointHitRadius:0,fill:'+1',tension:.25},
+      {label:'Low',data:bandLow,borderColor:'transparent',backgroundColor:'rgba(255,106,50,.12)',pointRadius:0,pointHitRadius:0,fill:false,tension:.25},
+      {label:'Forecast',data:forecastPadded,borderColor:ORANGE_DEEP,borderDash:[6,4],backgroundColor:'transparent',borderWidth:2,pointRadius:0,pointHitRadius:14,pointHoverRadius:5,pointHoverBackgroundColor:ORANGE_DEEP,tension:.25},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'top',labels:{filter:l=>l.text!=='High'&&l.text!=='Low',boxWidth:12,font:{size:10.5}}},
+        tooltip:{filter:c=>c.dataset.label!=='High'&&c.dataset.label!=='Low',
+          callbacks:{title:c=>_projFmtDayLabel(c[0]?.label)}}},
+      scales:{x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0,maxTicksLimit:9,font:{size:9.5},
+        callback:function(val){ return _projFmtDayLabel(this.getLabelForValue(val)); }}},y:{grid:{color:LINE}}}}
+  });
+}
+
+function _projRenderMonthlyChart(rows){
+  const data=rows.map(r=>({month:r.month,orders:parseInt(r.orders)||0}));
+  if(_projCharts.monthly) _projCharts.monthly.destroy();
+  _projCharts.monthly=new Chart(document.getElementById('chartProjMonthly'),{
+    type:'bar',
+    data:{labels:data.map(d=>_projFmtMonthLabel(d.month)),datasets:[{label:'Orders',data:data.map(d=>d.orders),backgroundColor:ORANGE,borderRadius:6,barThickness:28}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmtCount(c.raw)+' orders'}}},
+      scales:{x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0,autoSkip:false,font:{size:10.5}}},y:{grid:{color:LINE},ticks:{callback:v=>fmtCount(v)}}}}
+  });
+}
+
+function _projRenderDowChart(rows){
+  const sorted=[...rows].sort((a,b)=>parseInt(a.dow)-parseInt(b.dow));
+  const labels=sorted.map(r=>PROJ_DOW_NAMES[parseInt(r.dow)]||'?');
+  const vals=sorted.map(r=>parseFloat(r.avg_orders)||0);
+  if(_projCharts.dow) _projCharts.dow.destroy();
+  _projCharts.dow=new Chart(document.getElementById('chartProjDow'),{
+    type:'bar',
+    data:{labels,datasets:[{label:'Avg Orders',data:vals,backgroundColor:c=>{
+      const max=Math.max(...vals,1); const v=vals[c.dataIndex]||0;
+      return v>=max*.85?ORANGE_DEEP:v>=max*.6?ORANGE:AMBER;
+    },borderRadius:6,barThickness:36}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmtCount(c.raw)+' orders/day avg'}}},
+      scales:{x:{grid:{display:false}},y:{grid:{color:LINE}}}}
+  });
+}
+
+function _projRenderChannelChart(rows){
+  const months=[...new Set(rows.map(r=>r.month))].sort();
+  const channels=[...new Set(rows.map(r=>r.channel))];
+  const byKey={}; rows.forEach(r=>{ byKey[r.month+'|'+r.channel]=parseInt(r.orders)||0; });
+  const datasets=channels.map((ch,i)=>({
+    label:ch, data:months.map(m=>byKey[m+'|'+ch]||0),
+    borderColor:PALETTE[i%PALETTE.length], backgroundColor:'transparent', borderWidth:2, pointRadius:2, tension:.3
+  }));
+  if(_projCharts.channel) _projCharts.channel.destroy();
+  _projCharts.channel=new Chart(document.getElementById('chartProjChannel'),{
+    type:'line',
+    data:{labels:months.map(_projFmtMonthLabel),datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'top',labels:{boxWidth:12,font:{size:10.5}}}},
+      scales:{x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0,autoSkip:false,font:{size:10.5}}},y:{grid:{color:LINE}}}}
+  });
+}
+
+function _projSkuHashJitter(str, spread){
+  let h=0; for(let i=0;i<(str||'').length;i++){ h=(h*31+str.charCodeAt(i))|0; }
+  // deterministic pseudo-random in [-spread, spread]
+  return ((Math.abs(h)%1000)/1000 - .5) * 2 * spread;
+}
+function _projShortSku(s, max){
+  s=s||'—'; return s.length>max ? s.slice(0,max-1)+'…' : s;
+}
+function _projRenderVelocityChart(rows){
+  const GROWTH_CAP=150; // clamp extreme % growth so a few outliers don't stretch the whole chart
+  const parsed=rows.map(r=>{
+    const last30=parseInt(r.orders_last30)||0, prior30=parseInt(r.orders_prior30)||0;
+    let growth=prior30>0?((last30-prior30)/prior30*100):(last30>0?100:0);
+    const rawGrowth=growth;
+    growth=Math.max(-100,Math.min(GROWTH_CAP,growth));
+    return {sku:r.sku,volume:last30,growth,rawGrowth};
+  }).filter(p=>p.volume>0 || p.rawGrowth!==0) // drop true zero/zero noise points
+    .sort((a,b)=>b.volume-a.volume)
+    .slice(0,10); // top 10 selling SKUs by last-30-day order volume
+  const volMed=parsed.length?[...parsed.map(p=>p.volume)].sort((a,b)=>a-b)[Math.floor(parsed.length/2)]:0;
+  const quadInfo=p=>{
+    if(p.volume>=volMed && p.growth>=15) return {c:'#1D9A6C',label:'Rising Star'};
+    if(p.volume>=volMed && p.growth>-15) return {c:'#3E7CB1',label:'Workhorse'};
+    if(p.volume<volMed && p.growth>=15) return {c:'#FF6A32',label:'Emerging'};
+    return {c:'#DD4B39',label:'Review'};
+  };
+  const maxVol=parsed.length?Math.max(...parsed.map(p=>p.volume)):1;
+  const jitterX=maxVol*0.012;
+  const points=parsed.map(p=>({
+    x:Math.max(0, p.volume + _projSkuHashJitter(p.sku, jitterX)),
+    y:p.growth + _projSkuHashJitter(p.sku+'y', 1.2),
+    sku:p.sku, volume:p.volume, growth:p.rawGrowth
+  }));
+
+  const quadLinesPlugin={
+    id:'projQuadLines',
+    beforeDatasetsDraw(chart){
+      const {ctx, chartArea:{left,right,top,bottom}, scales:{x,y}} = chart;
+      ctx.save();
+      ctx.strokeStyle='rgba(120,120,120,.35)'; ctx.setLineDash([4,4]); ctx.lineWidth=1;
+      const xv=x.getPixelForValue(volMed);
+      if(xv>=left && xv<=right){ ctx.beginPath(); ctx.moveTo(xv,top); ctx.lineTo(xv,bottom); ctx.stroke(); }
+      const y15=y.getPixelForValue(15);
+      if(y15>=top && y15<=bottom){ ctx.beginPath(); ctx.moveTo(left,y15); ctx.lineTo(right,y15); ctx.stroke(); }
+      const yn15=y.getPixelForValue(-15);
+      if(yn15>=top && yn15<=bottom){ ctx.beginPath(); ctx.moveTo(left,yn15); ctx.lineTo(right,yn15); ctx.stroke(); }
+      ctx.restore();
+    }
+  };
+
+  if(_projCharts.velocity) _projCharts.velocity.destroy();
+  _projCharts.velocity=new Chart(document.getElementById('chartProjVelocity'),{
+    type:'scatter',
+    data:{datasets:[{label:'SKUs',data:points,
+      backgroundColor:c=>{ const col=quadInfo(parsed[c.dataIndex]||{volume:0,growth:0}).c; return col+'CC'; },
+      borderColor:c=>quadInfo(parsed[c.dataIndex]||{volume:0,growth:0}).c,
+      borderWidth:1,
+      pointRadius:c=>{ const v=(parsed[c.dataIndex]||{volume:0}).volume; return Math.min(11, 4.5 + Math.sqrt(v)*.9); },
+      pointHoverRadius:c=>{ const v=(parsed[c.dataIndex]||{volume:0}).volume; return Math.min(14, 6 + Math.sqrt(v)*.9); }
+    }]},
+    plugins:[quadLinesPlugin],
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{
+          title:c=>_projShortSku(c[0]?.raw?.sku, 42),
+          label:c=>[`${fmtCount(c.raw.volume)} orders (last 30 days)`, `${c.raw.growth>=0?'+':''}${c.raw.growth.toFixed(0)}% vs prior 30 days`, quadInfo({volume:c.raw.volume,growth:Math.max(-100,Math.min(GROWTH_CAP,c.raw.growth))}).label]
+        }}},
+      scales:{
+        x:{title:{display:true,text:'Orders (last 30 days)',font:{size:10.5}},grid:{color:LINE},beginAtZero:true},
+        y:{title:{display:true,text:'Growth % vs prior 30 days (capped ±100/150%)',font:{size:10}},grid:{color:LINE},min:-105,max:GROWTH_CAP+10}
+      }}
+  });
+}
+
+function _projRenderDiscountChart(rows){
+  const order=['0%','1-10%','11-20%','21-30%','30%+'];
+  const sorted=order.map(b=>rows.find(r=>r.bucket===b)).filter(Boolean);
+  if(_projCharts.discount) _projCharts.discount.destroy();
+  _projCharts.discount=new Chart(document.getElementById('chartProjDiscount'),{
+    data:{labels:sorted.map(r=>r.bucket),datasets:[
+      {type:'bar',label:'Avg Daily Orders',data:sorted.map(r=>r.avgDaily),backgroundColor:ORANGE,borderRadius:6,barThickness:32,yAxisID:'y'},
+      {type:'line',label:'Avg Revenue/Order',data:sorted.map(r=>r.avgRev),borderColor:BLUE,backgroundColor:BLUE,borderWidth:2.2,pointRadius:4,yAxisID:'y1',tension:.3}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{boxWidth:12,font:{size:10.5}}}},
+      scales:{
+        x:{grid:{display:false}},
+        y:{position:'left',grid:{color:LINE},title:{display:true,text:'Avg Daily Orders',font:{size:10}}},
+        y1:{position:'right',grid:{display:false},title:{display:true,text:'Revenue/Order',font:{size:10}},ticks:{callback:v=>fmtRev(v)}}
+      }}
+  });
+}
+
+function _projRenderReorderTable(rows, madUnits){
+  const tbody=document.getElementById('proj-reorder-tbody');
+  if(!rows.length){ tbody.innerHTML='<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--ink-soft);">No data</td></tr>'; return; }
+  const LEAD_DAYS=7, Z=1.65; // 90% service level, 7-day assumed lead time (no supplier lead-time column tracked yet)
+  tbody.innerHTML=rows.map(r=>{
+    const onHand=parseInt(r.on_hand)||0;
+    const avgDaily=parseFloat(r.avg_daily_demand)||0;
+    const daysCover=avgDaily>0?(onHand/avgDaily):(onHand>0?999:0);
+    const safetyStock=Math.round(Z*madUnits*Math.sqrt(LEAD_DAYS));
+    const reorderQty=Math.max(0, Math.round(avgDaily*LEAD_DAYS + safetyStock - onHand));
+    let status;
+    if(daysCover<LEAD_DAYS) status='<span style="color:#DD4B39;font-weight:700;">🔴 Reorder Now</span>';
+    else if(daysCover<LEAD_DAYS*2) status='<span style="color:#FFB238;font-weight:700;">🟡 Watch</span>';
+    else status='<span style="color:#1D9A6C;font-weight:700;">🟢 Healthy</span>';
+    return `<tr>
+      <td>${r.item_sku_code||'—'}</td><td>${r.client_name||'—'}</td><td>${r.facility_code||'—'}</td>
+      <td>${fmtCount(onHand)}</td><td>${avgDaily.toFixed(1)}</td>
+      <td>${daysCover>=999?'999+':daysCover.toFixed(1)}</td><td>${fmtCount(safetyStock)}</td>
+      <td style="font-weight:700;">${fmtCount(reorderQty)}</td><td>${status}</td>
+    </tr>`;
+  }).join('');
+}
+
 // We hook into loadSaleOrders — after it runs, if seller is active, reload it too
 const _svFilterWatch=()=>{
   const activeView=document.querySelector('#page-sale_orders .view.active');
   if(activeView && activeView.id==='sale_orders-seller' && window._svLoaded){
     loadSellerView();
+  }
+  if(activeView && activeView.id==='sale_orders-analytics' && window._projLoaded){
+    loadProjectionView();
   }
 };
 document.getElementById('btn-apply-so').addEventListener('click',_svFilterWatch);
