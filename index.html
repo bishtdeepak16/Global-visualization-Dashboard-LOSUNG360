@@ -2266,7 +2266,7 @@ const PANEL_INFO = {
   'Discount vs Volume Lift':
     'Bars = average daily orders at each discount band. Line = average revenue per order at that band. Shows whether deeper discounts actually move enough volume to offset the lower revenue per order.',
   'Reorder Recommendation':
-    'Compares forecasted demand to current stock on hand. Safety Stock = Z × MAD (in units) × √(lead time), sized directly from the backtest forecast error — more volatile demand automatically gets a bigger safety buffer. Reorder Now = stock will run out before the assumed 7-day lead time.'
+    'Compares forecasted demand to current stock on hand, per SKU. Safety Stock = 1.65 × that SKU\'s own day-to-day demand variability (in units) × √(7-day lead time) — a spikier SKU gets a bigger buffer, a steady SKU gets a smaller one. Reorder Now = stock runs out before the 7-day lead time.'
 };
 
 // ── Info (ⓘ) button injection + floating tooltip ─────────────────────
@@ -4688,7 +4688,11 @@ function _projRenderReorderTable(rows, madUnits){
     const onHand=parseInt(r.on_hand)||0;
     const avgDaily=parseFloat(r.avg_daily_demand)||0;
     const daysCover=avgDaily>0?(onHand/avgDaily):(onHand>0?999:0);
-    const safetyStock=Math.round(Z*madUnits*Math.sqrt(LEAD_DAYS));
+    // Each SKU's OWN day-to-day demand variability (std_daily_units from the backend).
+    // Falls back to the fleet-wide MAD (in units) only for a SKU with too little history to measure its own spread.
+    const skuStd=parseFloat(r.std_daily_units)||0;
+    const variability=skuStd>0?skuStd:madUnits;
+    const safetyStock=Math.round(Z*variability*Math.sqrt(LEAD_DAYS));
     const reorderQty=Math.max(0, Math.round(avgDaily*LEAD_DAYS + safetyStock - onHand));
     let status;
     if(daysCover<LEAD_DAYS) status='<span style="color:#DD4B39;font-weight:700;">🔴 Reorder Now</span>';
