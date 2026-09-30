@@ -1504,7 +1504,14 @@ function _startLoad(page){ return ++window._loadTokens[page]; }
 function _isStale(page, token){ return token !== window._loadTokens[page]; }
 
 // fetchData: pass rawParams=true to skip SO filter merge (for GRN/Putaway/Inv)
-async function fetchData(module, extra={}, rawParams=false){
+const _sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+// Apps Script web apps have a per-user concurrent-execution cap. When many chart
+// modules fire in parallel (Promise.all across a view), an occasional call can get
+// bounced with a generic HTML error page instead of JSON — that's a transient
+// overload, not a broken deployment. Retry a couple of times with a short,
+// increasing delay before giving up, so a single bounced call doesn't blank a KPI.
+async function fetchData(module, extra={}, rawParams=false, _attempt=0){
   const base = rawParams ? {} : getFilters();
   const mergedParams = {...base,...extra};
 
@@ -1513,11 +1520,17 @@ async function fetchData(module, extra={}, rawParams=false){
   if (cached !== undefined) return cached;
 
   const params=new URLSearchParams({module,...mergedParams});
+  const MAX_RETRIES=2, RETRY_DELAYS=[600,1400]; // ms
   try{
     const res=await fetch(`${WEBAPP_URL}?${params}`);
     const text=await res.text();
     if(text.trim().startsWith('<')){
-      console.error(`[${module}] returned HTML — check webapp deployment`);
+      if(_attempt<MAX_RETRIES){
+        console.warn(`[${module}] returned HTML (attempt ${_attempt+1}/${MAX_RETRIES+1}) — retrying…`);
+        await _sleep(RETRY_DELAYS[_attempt]);
+        return fetchData(module, extra, rawParams, _attempt+1);
+      }
+      console.error(`[${module}] returned HTML after ${MAX_RETRIES+1} attempts — check webapp deployment`);
       return null;
     }
     const json=JSON.parse(text);
@@ -1525,6 +1538,11 @@ async function fetchData(module, extra={}, rawParams=false){
     _cacheSet(module, mergedParams, json.data); // cache for instant repeat
     return json.data;
   }catch(err){
+    if(_attempt<MAX_RETRIES){
+      console.warn(`[${module}] ${err.message} (attempt ${_attempt+1}/${MAX_RETRIES+1}) — retrying…`);
+      await _sleep(RETRY_DELAYS[_attempt]);
+      return fetchData(module, extra, rawParams, _attempt+1);
+    }
     console.error(`[${module}]`,err.message);
     return null;
   }
@@ -3209,6 +3227,7 @@ async function loadGRN() {
   // Expiry risk slabs — based on (expiry_date - grn_date) days remaining
   ['30','60','90'].forEach(slab => {
     const el = document.getElementById('grn-exp-'+slab);
+    if (!el) return;
     const items = (expiry||[]).filter(r => {
       const d = parseInt(r.days_shelf_life)||0;
       if (slab==='30') return d>=0 && d<30;
@@ -3297,18 +3316,10 @@ window.addEventListener('load',async()=>{
   await loadFilterOptions();
   await loadSaleOrders();
 
-  // ── Background pre-load other pages so they open instantly ──────
-  // Staggered to avoid hammering the webapp cache simultaneously.
-  // Flags are set to true so nav clicks skip re-loading.
-  setTimeout(async () => {
-    if (!inventoryLoaded) { inventoryLoaded = true; await loadInventory(); }
-  }, 800);
-  setTimeout(async () => {
-    if (!putawayLoaded)  { putawayLoaded  = true; await loadPutaway();  }
-  }, 2000);
-  setTimeout(async () => {
-    if (!grnLoaded)      { grnLoaded      = true; await loadGRN();      }
-  }, 3500);
+  // Background preload of every other page/view (Seller View, Projection, Stock,
+  // GRN, Putaway) is scheduled once, staggered, near the bottom of this script —
+  // see "Background preload sequence" there. Keeps one single staggering plan
+  // instead of two competing ones.
   // Set today as default snapshot for inventory
   const todayDate = new Date().toISOString().split('T')[0];
   document.getElementById('inv-snapshot').value = todayDate;
@@ -4722,12 +4733,28 @@ document.getElementById('btn-apply-so').addEventListener('click',_svFilterWatch)
   document.getElementById(id)?.addEventListener('change',_svFilterWatch);
 });
 
-// ── Preload Seller View data on initial page load (not lazy anymore) ──
-// User navigates instantly to Seller View without waiting for first fetch
-if(!window._svLoaded){
-  window._svLoaded=true;
-  loadSellerView();
-}
+// ── Background preload sequence ──────────────────────────────────────
+// Sale Orders (Visualisation) already loads first, synchronously, in the main
+// init flow above. Everything else is staggered ~1.5s apart so their parallel
+// fetch fan-outs never overlap and hit the Apps Script concurrent-execution cap.
+// Order: Visualisation → Seller View → Projection → Stock → GRN → Putaway.
+// Flags are set to true up front so a nav/tab click during preload doesn't
+// trigger a duplicate load.
+setTimeout(()=>{
+  if(!window._svLoaded){ window._svLoaded=true; loadSellerView(); }
+}, 1500);
+setTimeout(()=>{
+  if(!window._projLoaded){ window._projLoaded=true; loadProjectionView(); }
+}, 3000);
+setTimeout(()=>{
+  if(!inventoryLoaded){ inventoryLoaded=true; loadInventory(); }
+}, 4500);
+setTimeout(()=>{
+  if(!grnLoaded){ grnLoaded=true; loadGRN(); }
+}, 6000);
+setTimeout(()=>{
+  if(!putawayLoaded){ putawayLoaded=true; loadPutaway(); }
+}, 7500);
 </script>
 
 
@@ -4735,4 +4762,3 @@ if(!window._svLoaded){
 
 </body>
 </html>
-  
