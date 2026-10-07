@@ -506,8 +506,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="kpi-row" style="grid-template-columns:repeat(5,1fr);margin-bottom:14px;">
       <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">30-Day Run Rate</div><div class="kpi-icon">🏃</div></div><div class="kpi-value" id="proj-runrate">—</div><div class="kpi-delta neutral"><span class="base">avg orders/day</span></div></div>
       <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">Trend Signal</div><div class="kpi-icon">📶</div></div><div class="kpi-value" id="proj-trend">—</div><div class="kpi-delta neutral" id="proj-trend-delta"><span class="base">recent vs prior half</span></div></div>
-      <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">Forecast Accuracy</div><div class="kpi-icon">🎯</div></div><div class="kpi-value" id="proj-mad">—</div><div class="kpi-delta neutral"><span class="base">avg error (MAD), 3mo backtest</span></div></div>
-      <div class="kpi-card" style="position:relative;"><div class="kpi-top"><div class="kpi-label">Projected Next 30 Days</div><div class="kpi-icon">🔮</div></div><div class="kpi-value" id="proj-forecast">—</div><div class="kpi-delta neutral"><span class="base" id="proj-forecast-band">Low – High</span></div></div>
+      <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">Forecast Accuracy</div><div class="kpi-icon">🎯</div></div><div class="kpi-value" id="proj-mad">—</div><div class="kpi-delta neutral"><span class="base" id="proj-mad-sub">avg monthly error (MAD), 3mo backtest</span></div></div>
+      <div class="kpi-card" style="position:relative;"><div class="kpi-top"><div class="kpi-label">Projected Next Month</div><div class="kpi-icon">🔮</div></div><div class="kpi-value" id="proj-forecast">—</div><div class="kpi-delta neutral"><span class="base" id="proj-forecast-band">Low – High</span></div></div>
       <div class="kpi-card"><div class="kpi-top"><div class="kpi-label">Discount Lift Ratio</div><div class="kpi-icon">🏷️</div></div><div class="kpi-value" id="proj-disclift">—</div><div class="kpi-delta neutral"><span class="base">revenue lift / discount %</span></div></div>
     </div>
 
@@ -515,8 +515,15 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Demand Trend &amp; Forecast</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
     <div class="panel" style="margin-bottom:18px;position:relative;">
       <div class="panel-head">
-        <div class="panel-head-left"><div class="panel-title">Rolling Demand Trend + 30-Day Forecast</div><div class="panel-sub">Solid = actual daily orders · Dashed = projected · Shaded = ± backtest error band</div></div>
-        <span class="tag gold">Level + Trend model</span>
+        <div class="panel-head-left"><div class="panel-title">Rolling Demand Trend + Forecast</div><div class="panel-sub" id="proj-trend-sub">Solid = actual monthly orders · Dashed = projected · Shaded = ± backtest error band</div></div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+          <div id="proj-trend-pills" style="display:flex;gap:4px;">
+            <button class="pill-btn active" data-pview="monthly">Monthly</button>
+            <button class="pill-btn" data-pview="daily">Daywise</button>
+            <button class="pill-btn" data-pview="quarterly">Quarter</button>
+          </div>
+          <span class="tag gold">Level + Trend model</span>
+        </div>
       </div>
       <div class="chart-box" style="height:300px;"><canvas id="chartProjTrend"></canvas></div>
       <div class="loading-overlay" id="load-proj-trend"><div class="spinner"></div></div>
@@ -569,7 +576,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <table class="sv-channel-table" style="width:100%;">
           <thead>
             <tr>
-              <th>SKU</th><th>Client</th><th>FC</th><th>On Hand</th><th>Avg Daily Demand</th>
+              <th>SKU</th><th>Client</th><th>Location</th><th>On Hand</th><th>Avg Daily Demand</th>
               <th>Days of Cover</th><th>Safety Stock</th><th>Suggested Reorder Qty</th><th>Status</th>
             </tr>
           </thead>
@@ -2271,8 +2278,8 @@ const PANEL_INFO = {
   'Daily Realized Revenue & Delivered Orders':
     'DELIVERED status only (shipping_package_status_code = DELIVERED). Green filled area = realized revenue (raw ₹, formatted as k/L/Cr). Orange line = delivered order count. Left Y-axis = revenue, right Y-axis = orders. MTD = month-to-date, Last 30 = rolling 30 days, Last 90 = rolling 90 days.',
   // ── Projection ───────────────────────────────────────────────────────
-  'Rolling Demand Trend + 30-Day Forecast':
-    'Solid line = actual daily orders (last 180 days). Dashed line = forecast, from a Level+Trend regression fit on all available days. Shaded band = ± MAD (the average forecast error measured via backtest). No seasonality applied yet — not enough history for it.',
+  'Rolling Demand Trend + Forecast':
+    'Three views of the same Level+Trend model. Monthly (default) = orders per calendar month with a forecast for the current month and the next 2 months. Daywise = orders per day (last 180 days) with a 30-day forecast. Quarter = orders per calendar quarter, with the current quarter\'s projected total and the next quarter. Solid = actual, dashed = forecast, shaded band = ± backtest error. The current month/quarter forecast = actual so far + projection for the days still to come (hover to see the actual so far). No seasonality yet — not enough history.',
   'Monthly Volume Trend':
     'Total orders grouped by calendar month. Shows the overall growth or decline shape month over month, without daily noise.',
   'Day-of-Week Demand Pattern':
@@ -2301,33 +2308,48 @@ Object.assign(_infoTip.style, {
 });
 document.body.appendChild(_infoTip);
 
+// Builds one ⓘ button wired to the floating tooltip, and appends it to `el`
+function _attachInfoBtn(el, info) {
+  if (!info || el.querySelector('.info-btn')) return;
+  const btn = document.createElement('button');
+  btn.className   = 'info-btn';
+  btn.textContent = 'info';
+  btn.setAttribute('data-info', info);
+  btn.addEventListener('mouseenter', () => {
+    _infoTip.textContent = info;
+    _infoTip.style.display = 'block';
+    const r = btn.getBoundingClientRect();
+    const tw = _infoTip.offsetWidth, th = _infoTip.offsetHeight;
+    let left = r.left + r.width / 2 - tw / 2;
+    let top  = r.top - th - 9;
+    // Flip below if not enough room above
+    if (top < 6) top = r.bottom + 8;
+    // Keep within viewport
+    left = Math.max(6, Math.min(left, window.innerWidth - tw - 6));
+    _infoTip.style.left = left + 'px';
+    _infoTip.style.top  = top  + 'px';
+  });
+  btn.addEventListener('mouseleave', () => { _infoTip.style.display = 'none'; });
+  el.appendChild(btn);
+}
+
 // Inject ⓘ button into every panel title that has an entry in PANEL_INFO
-document.querySelectorAll('.panel-title').forEach(el => {
-  const title = el.textContent.trim();
-  const info  = PANEL_INFO[title];
-  if (info && !el.querySelector('.info-btn')) {
-    const btn = document.createElement('button');
-    btn.className   = 'info-btn';
-    btn.textContent = 'info';
-    btn.setAttribute('data-info', info);
-    btn.addEventListener('mouseenter', () => {
-      _infoTip.textContent = info;
-      _infoTip.style.display = 'block';
-      const r = btn.getBoundingClientRect();
-      const tw = _infoTip.offsetWidth, th = _infoTip.offsetHeight;
-      let left = r.left + r.width / 2 - tw / 2;
-      let top  = r.top - th - 9;
-      // Flip below if not enough room above
-      if (top < 6) top = r.bottom + 8;
-      // Keep within viewport
-      left = Math.max(6, Math.min(left, window.innerWidth - tw - 6));
-      _infoTip.style.left = left + 'px';
-      _infoTip.style.top  = top  + 'px';
-    });
-    btn.addEventListener('mouseleave', () => { _infoTip.style.display = 'none'; });
-    el.appendChild(btn);
-  }
-});
+document.querySelectorAll('.panel-title').forEach(el => _attachInfoBtn(el, PANEL_INFO[el.textContent.trim()]));
+
+// ── KPI box info (Projection view) — plain-language meaning + how it is calculated ──
+const KPI_INFO = {
+  '30-Day Run Rate':
+    'How busy you are right now. Average orders per day across the latest 30 days that had orders. Calculation: total orders in those days ÷ number of days. Use it as the "current speed" of demand.',
+  'Trend Signal':
+    'Is demand growing or shrinking? The last ~180 days are split into an earlier half and a recent half. Trend = % change in average daily orders from the earlier half to the recent half. Positive = growing, negative = declining.',
+  'Forecast Accuracy':
+    'How far the monthly forecast is usually off. We step back in time, forecast a month using only the months before it, then compare with what really happened — repeated for the last 3 full months. The average gap (MAD) is shown, with the % of an average month below. Smaller = more reliable. Needs at least 4 full months of data.',
+  'Projected Next Month':
+    'Expected orders for the next calendar month. Calculation: a straight-line (Level + Trend) fit on the last 6 full months, extended one month ahead. Low – High = forecast ± the monthly error (MAD). With only 3 full months of data it uses their average (no trend). No seasonality is applied yet.',
+  'Discount Lift Ratio':
+    'Extra revenue per order (₹) for every 1% of discount, compared with orders that had no discount. Positive = discounted orders are bigger / worth more. Negative = discounted orders bring in less revenue per order. Calculated across discount bands (0%, 1-10%, 11-20%, 21-30%, 30%+), weighted by order count.'
+};
+document.querySelectorAll('#sale_orders-analytics .kpi-label').forEach(el => _attachInfoBtn(el, KPI_INFO[el.textContent.trim()]));
 async function loadSaleOrders(){
   const _tok = _startLoad('so');
   ['load-trend','load-cod','load-shiptype','load-client','load-courier',
@@ -4437,7 +4459,9 @@ async function loadProjectionView(){
 
   // ── 3-vs-3 (or N-vs-N, whatever's available) backtest: split into two halves,
   // fit Level+Trend on the earlier half, forecast the later half, measure MAD ──
-  let mad=0, madUnits=0, runRate=0, trendPct=0, forecastBase=0, forecastLow=0, forecastHigh=0;
+  // (daily MAD stays here: it drives the Daywise chart band and the reorder-table fallback;
+  //  the Forecast Accuracy / Projected Next Month KPI boxes use the monthly model below)
+  let mad=0, madUnits=0, runRate=0, trendPct=0;
   let unitsPerOrder=1;
   if(dailyRows.length>=10){
     const half=Math.floor(dailyRows.length/2);
@@ -4456,23 +4480,38 @@ async function loadProjectionView(){
     const totalUnits=dailyRows.reduce((s,d)=>s+d.units,0), totalOrders=dailyRows.reduce((s,d)=>s+d.orders,0);
     unitsPerOrder=totalOrders>0?totalUnits/totalOrders:1;
     madUnits=mad*unitsPerOrder;
-
-    // Full-data regression for the forward-looking 30-day projection
-    const regAll=_projLinReg(dailyRows.map(d=>d.orders));
-    const n=dailyRows.length;
-    let base30=0;
-    for(let i=1;i<=30;i++) base30+=Math.max(0, regAll.a+regAll.b*(n-1+i));
-    forecastBase=base30;
-    const band=mad*Math.sqrt(30);
-    forecastLow=Math.max(0, base30-band); forecastHigh=base30+band;
   }
+
+  // ── Monthly Level+Trend model: powers the Forecast Accuracy + Projected Next Month KPIs
+  //    and the Monthly / Quarter views of the demand chart ──
+  const M=_projBuildMonthlyModel(monthly||[], dailyRows, getFilters().dateTo);
+  window._projState={dailyRows, mad, M};
 
   document.getElementById('proj-runrate').textContent=fmtCount(Math.round(runRate));
   document.getElementById('proj-trend').textContent=(trendPct>=0?'+':'')+trendPct.toFixed(1)+'%';
   document.getElementById('proj-trend-delta').innerHTML=`<span class="base">${trendPct>=0?'growing':'declining'} vs prior period</span>`;
-  document.getElementById('proj-mad').textContent='±'+fmtCount(Math.round(mad))+'/day';
-  document.getElementById('proj-forecast').textContent=fmtCount(Math.round(forecastBase));
-  document.getElementById('proj-forecast-band').innerHTML=`Low ${fmtCount(Math.round(forecastLow))} – High ${fmtCount(Math.round(forecastHigh))}`;
+
+  // Forecast Accuracy (monthly): avg 1-month-ahead error over the last 3 full months
+  if(M.mad!=null){
+    document.getElementById('proj-mad').textContent='±'+fmtCount(Math.round(M.mad))+'/month';
+    document.getElementById('proj-mad-sub').textContent=
+      (M.madPct!=null?`≈ ${M.madPct.toFixed(0)}% of an avg month · `:'')+`${M.madN}-month backtest`;
+  } else {
+    document.getElementById('proj-mad').textContent='—';
+    document.getElementById('proj-mad-sub').textContent='needs 4+ full months of data';
+  }
+
+  // Projected Next Month: the calendar month after the current one
+  const nf=M.fcOk?M.fc[M.nextYm]:null;
+  if(nf){
+    document.getElementById('proj-forecast').textContent=fmtCount(Math.round(nf.val));
+    document.getElementById('proj-forecast-band').innerHTML=M.mad!=null
+      ? `${_projFmtMonthLabel(M.nextYm)} · Low ${fmtCount(Math.round(nf.low))} – High ${fmtCount(Math.round(nf.high))}`
+      : `${_projFmtMonthLabel(M.nextYm)} · avg of 3 months, band needs 4+`;
+  } else {
+    document.getElementById('proj-forecast').textContent='—';
+    document.getElementById('proj-forecast-band').textContent='needs 3+ full months of data';
+  }
 
   // Discount Lift Ratio KPI — weighted revenue/order change per 1% discount vs the 0% baseline
   const discRows=(discount||[]).map(r=>({bucket:r.discount_bucket,orders:parseInt(r.orders)||0,
@@ -4492,7 +4531,7 @@ async function loadProjectionView(){
   hideLoader('load-proj-channel'); hideLoader('load-proj-velocity'); hideLoader('load-proj-discount');
   hideLoader('load-proj-reorder');
 
-  _projRenderTrendChart(dailyRows, mad);
+  _projRenderTrendChart();
   _projRenderMonthlyChart(monthly||[]);
   _projRenderDowChart(dow||[]);
   _projRenderChannelChart(channel||[]);
@@ -4514,7 +4553,168 @@ function _projFmtMonthLabel(ym){
   const m=parseInt(parts[1],10)-1;
   return (PROJ_MON_NAMES[m]||'')+"'"+parts[0].slice(-2);
 }
-function _projRenderTrendChart(dailyRows, mad){
+// ── Monthly / Quarterly Level+Trend model ───────────────────────────
+const PROJ_FIT_MONTHS=6;     // regression fit window = last 6 full months
+function _projYmAdd(ym,n){ const [y,m]=ym.split('-').map(Number); const d=new Date(Date.UTC(y,m-1+n,1));
+  return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0'); }
+function _projDaysInMonth(ym){ const [y,m]=ym.split('-').map(Number); return new Date(Date.UTC(y,m,0)).getUTCDate(); }
+function _projQuarterOf(ym){ const [y,m]=ym.split('-').map(Number); return y+'-Q'+(Math.floor((m-1)/3)+1); }
+function _projNextQ(q){ let [y,n]=q.split('-Q').map(Number); n++; if(n>4){ n=1; y++; } return y+'-Q'+n; }
+function _projQuarterMonths(q){ const [y,n]=q.split('-Q').map(Number); const m0=(n-1)*3+1;
+  return [0,1,2].map(i=>y+'-'+String(m0+i).padStart(2,'0')); }
+function _projQLabel(q){ const [y,n]=q.split('-Q'); return 'Q'+n+"'"+y.slice(-2); }
+
+// Walk-forward backtest: forecast month k from months 0..k-1 only, compare with actual, average the gaps (MAD).
+// Needs 4+ full months; uses the last 3 one-step-ahead forecasts.
+function _projMonthlyBacktest(ys){
+  const n=ys.length, errs=[];
+  for(let k=Math.max(3,n-3); k<n; k++){
+    const reg=_projLinReg(ys.slice(0,k));
+    errs.push(Math.abs(ys[k]-Math.max(0,reg.a+reg.b*k)));
+  }
+  return errs.length?{mad:errs.reduce((s,e)=>s+e,0)/errs.length, n:errs.length}:null;
+}
+
+function _projBuildMonthlyModel(monthlyRows, dailyRows, dateTo){
+  const M={ok:false, fcOk:false, months:[], fc:{}, mad:null, madN:0, madPct:null, curYm:null, nextYm:null, mtd:0, elapsed:0, map:{}};
+  const yest=new Date(Date.now()-86400000).toISOString().slice(0,10);
+  const refDate=(dateTo&&dateTo<yest)?dateTo:yest;            // last day we treat as "over"
+  const refYm=refDate.slice(0,7), refDay=parseInt(refDate.slice(8,10),10);
+  const isComplete=ym=> ym<refYm || (ym===refYm && refDay>=_projDaysInMonth(ym));
+  const map={};
+  (monthlyRows||[]).forEach(r=>{ if(r.month) map[r.month]=(map[r.month]||0)+(parseInt(r.orders)||0); });
+  M.map=map;
+  const keys=Object.keys(map).sort();
+  if(!keys.length) return M;
+  const lastComplete=isComplete(refYm)?refYm:_projYmAdd(refYm,-1);
+  M.curYm=_projYmAdd(lastComplete,1);                          // current (still running) month = forecast step 1
+  M.nextYm=_projYmAdd(M.curYm,1);                              // next calendar month = forecast step 2
+  for(let ym=keys[0]; ym<=lastComplete; ym=_projYmAdd(ym,1)) M.months.push({ym, orders:map[ym]||0}); // gap months count as 0
+  // Actuals so far in the current month (only if data actually reaches into it)
+  const lastData=dailyRows.length?dailyRows[dailyRows.length-1].date:null;
+  if(lastData && lastData.slice(0,7)===M.curYm){ M.mtd=map[M.curYm]||0; M.elapsed=parseInt(lastData.slice(8,10),10); }
+  const daysCur=_projDaysInMonth(M.curYm);
+
+  const fit=M.months.slice(-PROJ_FIT_MONTHS).map(m=>m.orders);
+  const n=fit.length;
+  if(n<3) return M;                                            // not enough full months to fit a trend
+  M.ok=true; M.fcOk=true;
+  // With only 3 full months a fitted line is too shaky (can even drift to 0) — use the plain average until there are 4+
+  M.levelOnly=n<4;
+  const reg=M.levelOnly?{a:fit.reduce((s,v)=>s+v,0)/n, b:0}:_projLinReg(fit);
+  const bt=_projMonthlyBacktest(fit);
+  if(bt){ M.mad=bt.mad; M.madN=bt.n; }
+  const avg=fit.reduce((s,v)=>s+v,0)/n;
+  if(M.mad!=null && avg>0) M.madPct=M.mad/avg*100;
+  const remFrac=Math.max(0,(daysCur-M.elapsed)/daysCur);
+  for(let h=1;h<=6;h++){
+    const ym=_projYmAdd(lastComplete,h);
+    let val=Math.max(0, reg.a+reg.b*(n-1+h));
+    let band=(M.mad||0)*Math.sqrt(h);                          // uncertainty widens with horizon
+    if(h===1){ val=M.mtd+val*remFrac; band*=remFrac; }         // current month = actual so far + forecast for days still to come
+    M.fc[ym]={h, val, low:Math.max(0,val-band), high:val+band, band};
+  }
+  return M;
+}
+
+// Quarter series from the monthly model: completed quarters = actuals; current + next quarter = sum of monthly forecasts
+function _projBuildQuarterSeries(M){
+  const curQ=_projQuarterOf(M.curYm);
+  const firstQ=M.months.length?_projQuarterOf(M.months[0].ym):curQ;
+  const actual=[];
+  for(let q=firstQ; q<curQ; q=_projNextQ(q)){
+    actual.push({label:_projQLabel(q), val:_projQuarterMonths(q).reduce((s,ym)=>s+(M.map[ym]||0),0)});
+  }
+  const fc=[curQ,_projNextQ(curQ)].map(q=>{
+    let val=0, band=0, sofar=0;
+    _projQuarterMonths(q).forEach(ym=>{
+      if(ym<M.curYm){ const v=M.map[ym]||0; val+=v; sofar+=v; }
+      else { const f=M.fc[ym]; if(f){ val+=f.val; band+=f.band; } if(ym===M.curYm) sofar+=M.mtd; }
+    });
+    return {label:_projQLabel(q), val, low:Math.max(0,val-band), high:val+band, sofar:(q===curQ&&sofar>0)?sofar:null};
+  });
+  return {actual, fc};
+}
+
+// Shared renderer for the Monthly and Quarter views (same look as the Daywise chart)
+function _projRenderPeriodChart(actual, fc, soFarWord){
+  const nA=actual.length, nF=fc.length;
+  const labels=[...actual.map(a=>a.label), ...fc.map(f=>f.label)];
+  const last=nA?actual[nA-1].val:null;
+  const lead=(arr)=> nA?[...Array(nA-1).fill(null), last, ...arr]:[...arr];   // forecast line starts at the last actual point
+  const actualSeries=[...actual.map(a=>a.val), ...Array(nF).fill(null)];
+  const fcSeries=lead(fc.map(f=>f.val)), lowSeries=lead(fc.map(f=>f.low)), highSeries=lead(fc.map(f=>f.high));
+  const hideBand=c=>c.dataset.label!=='High'&&c.dataset.label!=='Low';
+
+  if(_projCharts.trend) _projCharts.trend.destroy();
+  _projCharts.trend=new Chart(document.getElementById('chartProjTrend'),{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'Actual Orders',data:actualSeries,borderColor:ORANGE,backgroundColor:'transparent',borderWidth:2.2,pointRadius:3,pointBackgroundColor:ORANGE,pointHitRadius:14,pointHoverRadius:6,tension:.2},
+      {label:'High',data:highSeries,borderColor:'transparent',backgroundColor:'rgba(255,106,50,.12)',pointRadius:0,pointHoverRadius:0,pointHitRadius:0,fill:'+1',tension:.2},
+      {label:'Low',data:lowSeries,borderColor:'transparent',backgroundColor:'rgba(255,106,50,.12)',pointRadius:0,pointHoverRadius:0,pointHitRadius:0,fill:false,tension:.2},
+      {label:'Forecast',data:fcSeries,borderColor:ORANGE_DEEP,borderDash:[6,4],backgroundColor:'transparent',borderWidth:2,pointRadius:3,pointBackgroundColor:ORANGE_DEEP,pointHitRadius:14,pointHoverRadius:6,tension:.2},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'top',labels:{filter:l=>l.text!=='High'&&l.text!=='Low',boxWidth:12,font:{size:10.5}}},
+        tooltip:{
+          filter:c=>hideBand(c) && c.raw!=null && !(c.dataset.label==='Forecast' && c.dataIndex<nA),
+          callbacks:{label:c=>{
+            const v=fmtCount(Math.round(c.raw));
+            if(c.dataset.label==='Forecast'){
+              const f=fc[c.dataIndex-nA]; if(!f) return `Forecast: ${v}`;
+              const so=f.sofar!=null?` · ${fmtCount(Math.round(f.sofar))} ${soFarWord} so far`:'';
+              return `Forecast: ${v} (Low ${fmtCount(Math.round(f.low))} – High ${fmtCount(Math.round(f.high))})${so}`;
+            }
+            return `${c.dataset.label}: ${v}`;
+          }}}},
+      scales:{x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0,autoSkip:false,font:{size:10}}},
+        y:{beginAtZero:true,grid:{color:LINE},ticks:{callback:v=>fmtCount(v)}}}}
+  });
+}
+
+// Pill dispatcher: Monthly (default) | Daywise | Quarter
+window._projView='monthly';
+const PROJ_TREND_SUB={
+  monthly:'Solid = actual monthly orders · Dashed = projected (this month + next 2) · Shaded = ± backtest error band · Hover for actual-so-far this month',
+  daily:'Solid = actual daily orders · Dashed = projected (next 30 days) · Shaded = ± backtest error band',
+  quarterly:'Solid = actual quarterly orders · Dashed = projected (this quarter + next) · Shaded = ± backtest error band · Hover for actual-so-far this quarter'
+};
+function _projRenderTrendChart(){
+  const st=window._projState; if(!st) return;
+  const view=window._projView||'monthly';
+  const subEl=document.getElementById('proj-trend-sub');
+  let sub=PROJ_TREND_SUB[view];
+  if(view==='daily'){
+    _projRenderDailyChart(st.dailyRows, st.mad);
+  } else {
+    const M=st.M;
+    if(view==='monthly'){
+      const actual=M.months.slice(-12).map(m=>({label:_projFmtMonthLabel(m.ym), val:m.orders}));
+      const fc=M.fcOk?[M.curYm,M.nextYm,_projYmAdd(M.nextYm,1)].map((ym,i)=>{
+        const f=M.fc[ym]; return {label:_projFmtMonthLabel(ym), val:f.val, low:f.low, high:f.high, sofar:i===0&&M.elapsed>0?M.mtd:null};
+      }):[];
+      _projRenderPeriodChart(actual, fc, 'month-to-date');
+    } else {
+      const Q=M.curYm?_projBuildQuarterSeries(M):{actual:[],fc:[]};
+      _projRenderPeriodChart(Q.actual, M.fcOk?Q.fc:[], 'quarter-to-date');
+    }
+    if(!M.fcOk) sub+=' — forecast needs 3+ full months of data';
+    else if(M.mad==null) sub+=' — only 3 full months so far: average used (no trend) and no error band until 4+ full months';
+  }
+  if(subEl) subEl.textContent=sub;
+}
+document.querySelectorAll('#proj-trend-pills .pill-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('#proj-trend-pills .pill-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    window._projView=btn.dataset.pview;
+    _projRenderTrendChart();
+  });
+});
+
+function _projRenderDailyChart(dailyRows, mad){
   const labels=dailyRows.map(d=>d.date);
   const actual=dailyRows.map(d=>d.orders);
   // 30-day forward forecast appended after the actual series
@@ -4710,7 +4910,7 @@ function _projRenderReorderTable(rows, madUnits){
     else if(daysCover<LEAD_DAYS*2) status='<span style="color:#FFB238;font-weight:700;">🟡 Watch</span>';
     else status='<span style="color:#1D9A6C;font-weight:700;">🟢 Healthy</span>';
     return `<tr>
-      <td>${r.item_sku_code||'—'}</td><td>${r.client_name||'—'}</td><td>${r.facility_code||'—'}</td>
+      <td>${r.item_sku_code||'—'}</td><td>${r.client_name||'—'}</td><td title="${(r.facility_code||'').replace(/"/g,'&quot;')}">${r.facility_city||r.facility_code||'—'}</td>
       <td>${fmtCount(onHand)}</td><td>${avgDaily.toFixed(1)}</td>
       <td>${daysCover>=999?'999+':daysCover.toFixed(1)}</td><td>${fmtCount(safetyStock)}</td>
       <td style="font-weight:700;">${fmtCount(reorderQty)}</td><td>${status}</td>
@@ -4762,4 +4962,3 @@ setTimeout(()=>{
 
 </body>
 </html>
-  
