@@ -180,7 +180,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .info-btn.info-img:hover{transform:scale(1.18);}
 /* Projection KPI row: smaller emoji tile, title + info icon on one line, identical alignment in every box */
 #sale_orders-analytics .kpi-top{align-items:center;margin-bottom:12px;min-height:34px;gap:8px;}
-#sale_orders-analytics .kpi-label{display:flex;align-items:center;white-space:nowrap;flex:1 1 auto;min-width:0;}
+#sale_orders-analytics .kpi-label{display:flex;align-items:center;white-space:nowrap;flex:1 1 auto;min-width:0;position:relative;top:-6px;}
+.filter-bar.proj-mode .date-label,.filter-bar.proj-mode input[type=date],.filter-bar.proj-mode #btn-apply-so,.filter-bar.proj-mode .filter-divider:nth-of-type(4){display:none !important;}
 #sale_orders-analytics .kpi-icon{width:34px;height:34px;font-size:17px;border-radius:10px;flex-shrink:0;}
 
 /* LEGEND */
@@ -1359,6 +1360,7 @@ document.querySelectorAll('.pill-toggle').forEach(group=>{
       // Save current tab's filter state before switching
       _saveTabFilters(_activeTab);
       _activeTab=btn.dataset.view;
+      if(key==='sale_orders'){const fb=document.querySelector('#page-sale_orders .filter-bar')||document.querySelector('.filter-bar'); if(fb) fb.classList.toggle('proj-mode',_activeTab==='analytics');}
       // Restore new tab's filter state
       _restoreTabFilters(_activeTab);
       // Lazy-load Seller View on first visit
@@ -2350,15 +2352,15 @@ document.querySelectorAll('.panel-title').forEach(el => _attachInfoBtn(el, PANEL
 // ── KPI box info (Projection view) — plain-language meaning + how it is calculated ──
 const KPI_INFO = {
   '30-Day Run Rate':
-    'How busy you are. Daywise (default) = average orders per day across the latest 30 days that had orders (total orders ÷ days). Monthly = average orders per month over the last 3 full months (the running month is left out because it is incomplete). Use the pills to switch.',
+    'How busy you are. Daywise (default) = average orders per day across the latest 30 days that had orders (total orders ÷ days). Monthly = average orders per month over the last 3 full months (the running month is left out because it is incomplete). Use the pills to switch. Example: 30 days, 15,000 orders → 500 orders/day. Last 3 full months 50k, 54k, 55k → 53k orders/month.',
   'Trend Signal':
-    'Is demand growing or shrinking? The last ~180 days are split into an earlier half and a recent half. Trend = % change in average daily orders from the earlier half to the recent half. Positive = growing, negative = declining.',
+    'Is demand growing or shrinking? The last ~180 days are split into an earlier half and a recent half. Trend = % change in average daily orders from the earlier half to the recent half. Positive = growing, negative = declining. Example: earlier half 1,000/day, recent half 900/day → −10%.',
   'Forecast Accuracy':
-    'How far the monthly forecast is usually off. We step back in time, forecast a month using only the months before it, then compare with what really happened — repeated for the last 3 full months. The average gap (MAD) is shown, with the % of an average month below. Smaller = more reliable. Needs at least 4 full months of data.',
+    'How far the monthly forecast is usually off. We step back in time, forecast a month using only the months before it, then compare with what really happened — repeated for the last 3 full months. The average gap (MAD) is shown, with the % of an average month below. Smaller = more reliable. Needs at least 4 full months of data. Example: forecast 52k, real 60k → miss 8k; next miss 3k; next 5k → average ±5.3k/month.',
   'Projected Next Month':
-    'Expected orders for the next calendar month. Calculation: a straight-line (Level + Trend) fit on the last 6 full months, extended one month ahead. Low – High = forecast ± the monthly error (MAD). With only 3 full months of data it uses their average (no trend). No seasonality is applied yet.',
+    'Expected orders for the next calendar month. Calculation: a straight-line (Level + Trend) fit on the last 6 full months, extended one month ahead. Low – High = forecast ± the monthly error (MAD). With only 3 full months of data it uses their average (no trend). No seasonality is applied yet. Example: last months 50k, 52k, 54k, 56k → trend +2k/month → next ≈ 58k (± error band).',
   'Discount Lift Ratio':
-    'Extra revenue per order (₹) for every 1% of discount, compared with orders that had no discount. Positive = discounted orders are bigger / worth more. Negative = discounted orders bring in less revenue per order. Calculated across discount bands (0%, 1-10%, 11-20%, 21-30%, 30%+), weighted by order count.'
+    'Extra revenue per order (₹) for every 1% of discount, compared with orders that had no discount. Positive = discounted orders are bigger / worth more. Negative = discounted orders bring in less revenue per order. Calculated across discount bands (0%, 1-10%, 11-20%, 21-30%, 30%+), weighted by order count. Example: no-discount orders avg ₹500, 20%-discount orders avg ₹600 → +₹100 for 20% = ₹5 per 1%. Negative = discounts are not paying for themselves.'
 };
 document.querySelectorAll('#sale_orders-analytics .kpi-label').forEach(el => _attachInfoBtn(el, KPI_INFO[el.textContent.trim()], true));
 async function loadSaleOrders(){
