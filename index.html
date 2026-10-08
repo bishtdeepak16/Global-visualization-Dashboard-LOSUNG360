@@ -4514,7 +4514,7 @@ async function loadProjectionView(){
       (M.madPct!=null?`≈ ${M.madPct.toFixed(0)}% of an avg month · `:'')+`${M.madN}-month backtest`;
   } else {
     document.getElementById('proj-mad').textContent='—';
-    document.getElementById('proj-mad-sub').textContent='needs 4+ full months of data';
+    document.getElementById('proj-mad-sub').textContent=M.skippedFirst?'new client · needs 4+ full months (onboarding month skipped)':'needs 4+ full months of data';
   }
 
   // Projected Next Month: the calendar month after the current one
@@ -4526,7 +4526,7 @@ async function loadProjectionView(){
       : `${_projFmtMonthLabel(M.nextYm)} · avg of 3 months, band needs 4+`;
   } else {
     document.getElementById('proj-forecast').textContent='—';
-    document.getElementById('proj-forecast-band').textContent='needs 3+ full months of data';
+    document.getElementById('proj-forecast-band').textContent=M.skippedFirst?'new client · needs 3+ full months (onboarding month skipped)':'needs 3+ full months of data';
   }
 
   // Discount Lift Ratio KPI — weighted revenue/order change per 1% discount vs the 0% baseline
@@ -4605,7 +4605,11 @@ function _projBuildMonthlyModel(monthlyRows, dailyRows, dateTo){
   const lastComplete=isComplete(refYm)?refYm:_projYmAdd(refYm,-1);
   M.curYm=_projYmAdd(lastComplete,1);                          // current (still running) month = forecast step 1
   M.nextYm=_projYmAdd(M.curYm,1);                              // next calendar month = forecast step 2
-  for(let ym=keys[0]; ym<=lastComplete; ym=_projYmAdd(ym,1)) M.months.push({ym, orders:map[ym]||0}); // gap months count as 0
+  // A client whose first order came after the 7th of its first month has a part-month there (onboarding ramp) — leave that month out of the fit
+  let startYm=keys[0];
+  const firstDay=dailyRows.length?dailyRows[0].date:null;
+  if(firstDay && firstDay.slice(0,7)===startYm && parseInt(firstDay.slice(8,10),10)>7){ startYm=_projYmAdd(startYm,1); M.skippedFirst=keys[0]; }
+  for(let ym=startYm; ym<=lastComplete; ym=_projYmAdd(ym,1)) M.months.push({ym, orders:map[ym]||0}); // gap months count as 0
   // Actuals so far in the current month (only if data actually reaches into it)
   const lastData=dailyRows.length?dailyRows[dailyRows.length-1].date:null;
   if(lastData && lastData.slice(0,7)===M.curYm){ M.mtd=map[M.curYm]||0; M.elapsed=parseInt(lastData.slice(8,10),10); }
