@@ -183,6 +183,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 #sale_orders-analytics .kpi-label{display:flex;align-items:center;white-space:nowrap;flex:1 1 auto;min-width:0;position:relative;top:-6px;}
 .filter-bar.proj-mode .date-label,.filter-bar.proj-mode input[type=date],.filter-bar.proj-mode #btn-apply-so,.filter-bar.proj-mode .filter-divider:nth-of-type(4){display:none !important;}
 #sale_orders-analytics .proj-metric-sel{font:600 11px Inter,sans-serif;padding:4px 8px;border-radius:20px;border:1px solid var(--orange);color:var(--orange);background:#fff;cursor:pointer;margin-left:8px;}
+#sale_orders-analytics .kpi-card:hover{transform:none;}
 #sale_orders-analytics .kpi-icon{width:34px;height:34px;font-size:17px;border-radius:10px;flex-shrink:0;}
 
 /* LEGEND */
@@ -881,14 +882,14 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <!-- V7: Profitability Waterfall -->
       <div class="panel" style="position:relative;">
         <div class="panel-head">
-          <div class="panel-head-left"><div class="panel-title">SKU Profitability Waterfall</div><div class="panel-sub">Revenue → Discount → COGS → Gross Margin · Top 8 SKUs with cost_price</div></div>
+          <div class="panel-head-left"><div class="panel-title">SKU Profitability Waterfall</div><div class="panel-sub">Revenue → COGS → Logistics → Discount → Remaining Revenue (delivered orders, SKUs with cost price)</div></div>
           <span id="sv-profit-coverage" class="tag">Coverage: —</span>
         </div>
         <div id="sv-profit-waterfall" style="padding:4px 0 8px;">
           <div style="text-align:center;padding:40px 0;color:var(--ink-soft);">Loading…</div>
         </div>
         <div id="sv-profit-summary" style="border-top:1px solid var(--line);padding-top:10px;margin-top:2px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-          <span style="font-size:10.5px;color:var(--ink-soft);font-style:italic;">Logistics costs excluded from margin</span>
+          <span style="font-size:10.5px;color:var(--ink-soft);font-style:italic;">Logistics = shipping charges + COD service charges</span>
           <span id="sv-profit-margin-pct" style="font-family:'Sora',sans-serif;font-size:14px;font-weight:800;color:var(--green);">—</span>
         </div>
         <div class="loading-overlay" id="load-sv-profit"><div class="spinner"></div></div>
@@ -2287,7 +2288,7 @@ const PANEL_INFO = {
   'Delivery Speed · Courier × Zone':
     'Average days from dispatch_date to delivery_date per courier, split by Metro vs Non-Metro pincode. Only courier-zone pairs with ≥10 deliveries shown. Scroll within the chart to see all couriers. Metro pincodes defined by dim_pincode zone field.',
   'SKU Profitability Waterfall':
-    'Only for SKUs with cost_price data (coverage shown top-right). Revenue = SUM(total_price) of DELIVERED orders. Gross Margin = Revenue − Discount − COGS. COGS = SUM(cost_price × quantity) for delivered items. Logistics costs excluded from margin calculation.',
+    'Only for SKUs with cost_price data (coverage shown top-right). Revenue = SUM(total_price) of DELIVERED orders. Gross Margin = Revenue − Discount − COGS. COGS = SUM(cost_price × quantity) for delivered items. Logistics = shipping charges + COD service charges calculation.',
   'Daily Realized Revenue & Delivered Orders':
     'DELIVERED status only (shipping_package_status_code = DELIVERED). Green filled area = realized revenue (raw ₹, formatted as k/L/Cr). Orange line = delivered order count. Left Y-axis = revenue, right Y-axis = orders. MTD = month-to-date, Last 30 = rolling 30 days, Last 90 = rolling 90 days.',
   // ── Projection ───────────────────────────────────────────────────────
@@ -3720,25 +3721,70 @@ async function loadSellerView(){
     const rev=parseFloat(svProfit.total_revenue)||0;
     const disc=parseFloat(svProfit.total_discount)||0;
     const cogs=parseFloat(svProfit.total_cogs)||0;
-    const gm=rev-disc-cogs;
-    const maxVal=Math.max(rev,0.001);
-    const bars=[
-      {label:'Revenue',val:rev,pct:100,color:GREEN},
-      {label:'− Discount',val:-disc,pct:(disc/maxVal)*100,color:ORANGE},
-      {label:'− COGS',val:-cogs,pct:(cogs/maxVal)*100,color:RED},
-      {label:'Gross Margin',val:gm,pct:(gm/maxVal)*100,color:gm>=0?'#1D9A6C':'#DD4B39'},
+    const logi=parseFloat(svProfit.total_logistics)||0;
+    const gm=rev-cogs-logi-disc;                       // remaining revenue = actual profit
+    const steps=[
+      {k:'Revenue',        val:rev,  sign:'+', sub:'',                 total:true },
+      {k:'COGS',           val:cogs, sign:'−', sub:'',                 total:false},
+      {k:'Logistics Cost', val:logi, sign:'−', sub:'',                 total:false},
+      {k:'Discount',       val:disc, sign:'−', sub:'',                 total:false},
+      {k:'Remaining Revenue',val:gm, sign:gm<0?'−':'+', sub:'(Profit)',total:true }
     ];
-    const wf=document.getElementById('sv-profit-waterfall');
-    wf.innerHTML=bars.map(b=>`
-      <div class="sv-wf-row">
-        <span class="sv-wf-label">${b.label}</span>
-        <div class="sv-wf-track">
-          <div class="sv-wf-bar" style="width:${Math.max(Math.abs(b.pct),2)}%;background:${b.color};opacity:.85;"></div>
-        </div>
-        <span class="sv-wf-val">${b.val<0?'−':''}${fmtRev(Math.abs(b.val))}</span>
-      </div>${b.label==='− COGS'?'<div class="sv-wf-divider"></div>':''}`).join('');
+    const pctOf=v=>rev>0?Math.abs(v)/rev*100:0;
+    // geometry
+    const W=760,H=330,L=64,R=16,T=34,B=62, pw=W-L-R, ph=H-T-B;
+    const hi=Math.max(rev,0.001), lo=Math.min(0,gm);
+    const y=v=>T+ph-((v-lo)/(hi-lo))*ph;
+    const slot=pw/steps.length, bw=Math.min(96,slot*0.56);
+    let level=0, out='';
+    // grid + y axis
+    for(let t=0;t<=5;t++){
+      const v=lo+(hi-lo)*t/5, yy=y(v);
+      out+=`<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="rgba(120,130,150,.18)" stroke-width="1"/>`;
+      out+=`<text x="${L-8}" y="${yy+4}" text-anchor="end" font-size="10.5" fill="#6B7A99">${fmtRev(v)}</text>`;
+    }
+    out+=`<line x1="${L}" x2="${L}" y1="${T}" y2="${T+ph}" stroke="rgba(120,130,150,.45)"/>`;
+    let prevTopY=null;
+    steps.forEach((st,n)=>{
+      const x=L+slot*n+(slot-bw)/2;
+      let from,to;
+      if(st.total){ from=0; to=(n===0?rev:gm); level=to; }
+      else { from=level; to=level-st.val; level=to; }
+      const yTop=y(Math.max(from,to)), yBot=y(Math.min(from,to));
+      const h=Math.max(3,yBot-yTop);
+      const good=st.total && (n===0||gm>=0);
+      const fill=good?'url(#wfGreen)':'url(#wfRed)';
+      const tip=`${st.k}: ${st.sign==='−'?'−':''}${fmtRev(Math.abs(st.val))} (${pctOf(st.val).toFixed(1)}% of revenue)`;
+      // connector from previous bar
+      if(prevTopY!==null){
+        out+=`<line x1="${x-(slot-bw)}" x2="${x}" y1="${prevTopY}" y2="${prevTopY}" stroke="#8795B5" stroke-width="1.2" stroke-dasharray="4 3"/>`;
+      }
+      out+=`<g class="wf-bar"><title>${tip}</title><rect x="${x}" y="${yTop}" width="${bw}" height="${h}" rx="4" fill="${fill}"/></g>`;
+      // value label
+      const lblY=st.total?yTop-8:yBot+16;
+      const colr=good?'#14532D':(st.total?'#B91C1C':'#E11D48');
+      out+=`<text x="${x+bw/2}" y="${lblY}" text-anchor="middle" font-size="14" font-weight="800" fill="${st.total?'#0F1B3D':colr}" font-family="Sora,sans-serif">${st.sign==='−'?'−':''}${fmtRev(Math.abs(st.val))}</text>`;
+      // category labels
+      const cat=st.k.length>14&&st.total?['Remaining','Revenue']:[st.k];
+      const sub2=st.total&&n===0?'':(st.total?'(Profit)':`(${pctOf(st.val).toFixed(0)}%)`);
+      cat.forEach((c,ci)=>{ out+=`<text x="${x+bw/2}" y="${T+ph+20+ci*14}" text-anchor="middle" font-size="12" font-weight="600" fill="#1B2A4E">${c}</text>`; });
+      if(sub2) out+=`<text x="${x+bw/2}" y="${T+ph+20+cat.length*14}" text-anchor="middle" font-size="10.5" fill="#6B7A99">${sub2}</text>`;
+      prevTopY=y(level);
+    });
+    const dot=c=>`<span style="display:inline-block;width:11px;height:11px;border-radius:50%;background:${c};margin-right:7px;flex-shrink:0;"></span>`;
+    const leg=steps.map((st,n)=>{
+      const good=st.total&&(n===0||gm>=0);
+      return `<div style="display:flex;align-items:flex-start;padding:0 8px;${n?'border-left:1px solid var(--line);':''}">${dot(good?'#1D9A6C':'#EF4444')}<div style="font-size:11px;line-height:1.35;"><div style="font-weight:600;color:var(--ink);">${st.k}</div><div style="color:var(--ink-soft);">${st.sign==='−'?'−':''}${fmtRev(Math.abs(st.val))} <span style="color:#6B7A99;">(${pctOf(st.val).toFixed(0)}%)</span></div></div></div>`;
+    }).join('');
+    document.getElementById('sv-profit-waterfall').innerHTML=
+      `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;max-height:340px;" role="img" aria-label="Revenue to remaining revenue waterfall">
+        <defs>
+          <linearGradient id="wfGreen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#43C063"/><stop offset="1" stop-color="#12904A"/></linearGradient>
+          <linearGradient id="wfRed" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF6B6B"/><stop offset="1" stop-color="#F23F4B"/></linearGradient>
+        </defs>${out}</svg>
+       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-top:8px;padding:10px 4px;border:1px solid var(--line);border-radius:12px;">${leg}</div>`;
     const gmPct=(rev>0?gm/rev*100:0);
-    document.getElementById('sv-profit-margin-pct').textContent=`GM: ${gmPct.toFixed(1)}%`;
+    document.getElementById('sv-profit-margin-pct').textContent=`Profit margin: ${gmPct.toFixed(1)}%`;
     document.getElementById('sv-profit-margin-pct').style.color=gmPct>=30?GREEN:gmPct>=15?AMBER:RED;
   }
   hideLoader('load-sv-profit');
