@@ -666,8 +666,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       </div>
       <div style="overflow-x:auto;">
         <table class="sv-status-table" id="sv-status-table">
-          <thead><tr><th style="min-width:200px;">Status</th><th>Orders</th><th>Units</th><th>Value (₹)</th><th>% of Orders</th><th>% of Units</th><th title="Orders ÷ dispatched orders (Delivered + In Transit + Return In Transit + Return Delivered). Same base as the Delivery Rate / Return Rate KPIs. Cancelled and Processing are not dispatched.">% of Dispatched</th></tr></thead>
-          <tbody id="sv-status-tbody"><tr><td colspan="7" style="text-align:center;padding:28px;color:var(--ink-soft);">Loading seller data…</td></tr></tbody>
+          <thead><tr><th style="min-width:200px;">Status</th><th>Orders</th><th>Units</th><th>Value (₹)</th><th>% of Orders</th><th>% of Units</th></tr></thead>
+          <tbody id="sv-status-tbody"><tr><td colspan="5" style="text-align:center;padding:28px;color:var(--ink-soft);">Loading seller data…</td></tr></tbody>
         </table>
       </div>
       <div class="loading-overlay" id="load-sv-status"><div class="spinner"></div></div>
@@ -3435,10 +3435,12 @@ function svUpdateDelRetFromStatus(){
   const RETURN_KEYS    =['RETURN_DELIVERED','RTO','RTO_DELIVERED'];
   const type=_svDelLevel==='item'?'units':'orders';
   const deliv  =get('DELIVERED',type);
-  const dispatched=DISPATCHED_KEYS.reduce((s,k)=>s+get(k,type),0)||1;
+  // Same base as the Fulfilment Status × Volume table: ALL statuses (incl. Cancelled + Processing)
+  const allTotal=(t)=>Object.values(merged).reduce((s,m)=>s+(m[t]||0),0)||1;
+  const dispatched=allTotal(type);
   const retType=_svRetLevel==='item'?'units':'orders';
   const returned=RETURN_KEYS.reduce((s,k)=>s+get(k,retType),0);
-  const delivForRet=get('DELIVERED',retType)||1;
+  const delivForRet=allTotal(retType);
   const delRate=deliv/dispatched*100;
   const retRate=returned/delivForRet*100;
   const delEl=document.getElementById('kpi-sv-delivery-rate');
@@ -3808,7 +3810,7 @@ function svRenderStatusTable(m){
   m = m || 'orders';
   const tbody=document.getElementById('sv-status-tbody');
   if(!_svStatusData.length){
-    tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--ink-soft);">No seller data — webapp modules pending deployment</td></tr>';
+    tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--ink-soft);">No seller data — webapp modules pending deployment</td></tr>';
     return;
   }
   // Merge SHIPPED+DISPATCHED → IN_TRANSIT, RETURN_EXPECTED → RETURN_IN_TRANSIT, RETURNED → RETURN_DELIVERED
@@ -3823,8 +3825,6 @@ function svRenderStatusTable(m){
   const totalOrders=Object.values(merged).reduce((s,r)=>s+r.orders,0)||1;
   const totalUnits =Object.values(merged).reduce((s,r)=>s+r.units, 0)||1;
   const reordered=SV_STATUS_ORDER.map(k=>merged[k]).filter(Boolean);
-  const DISPATCHED_SET=['DELIVERED','IN_TRANSIT','RETURN_IN_TRANSIT','RETURN_DELIVERED','RTO','RTO_DELIVERED'];
-  const totalDispatched=reordered.filter(r=>DISPATCHED_SET.includes(r.status)).reduce((s,r)=>s+r.orders,0)||0;
   tbody.innerHTML=reordered.map(r=>{
     const cfg=SV_STATUS_CFG[r.status]||{color:'#6B6660',bg:'rgba(107,102,96,.1)',label:r.status};
     const pctOrders=(r.orders/totalOrders*100).toFixed(1);
@@ -3841,7 +3841,6 @@ function svRenderStatusTable(m){
       <td class="sv-num">${fmtRev(r.total_value)}</td>
       <td><span class="sv-pct-pill" style="background:${cfg.bg};color:${cfg.color};">${pctOrders}%</span></td>
       <td><span class="sv-pct-pill" style="background:${cfg.bg};color:${cfg.color};">${pctUnits}%</span></td>
-      <td>${DISPATCHED_SET.includes(r.status)&&totalDispatched?`<span class="sv-pct-pill" style="background:${cfg.bg};color:${cfg.color};">${(r.orders/totalDispatched*100).toFixed(1)}%</span>`:'<span style="color:var(--ink-soft);">—</span>'}</td>
     </tr>`;
   }).join('');
 }
