@@ -182,6 +182,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 #sale_orders-analytics .kpi-top{align-items:center;margin-bottom:12px;min-height:34px;gap:8px;}
 #sale_orders-analytics .kpi-label{display:flex;align-items:center;white-space:nowrap;flex:1 1 auto;min-width:0;position:relative;top:-6px;}
 .filter-bar.proj-mode .date-label,.filter-bar.proj-mode input[type=date],.filter-bar.proj-mode #btn-apply-so,.filter-bar.proj-mode .filter-divider:nth-of-type(4){display:none !important;}
+#sale_orders-analytics .proj-metric-sel{font:600 11px Inter,sans-serif;padding:4px 8px;border-radius:20px;border:1px solid var(--orange);color:var(--orange);background:#fff;cursor:pointer;margin-left:8px;}
 #sale_orders-analytics .kpi-icon{width:34px;height:34px;font-size:17px;border-radius:10px;flex-shrink:0;}
 
 /* LEGEND */
@@ -543,12 +544,12 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <!-- VISUAL 1 + 3: Monthly Volume + Day-of-Week -->
     <div class="grid grid-2b" style="margin-bottom:18px;">
       <div class="panel" style="position:relative;">
-        <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Monthly Volume Trend</div><div class="panel-sub">Orders by calendar month</div></div><span class="tag">Projection</span></div>
+        <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Monthly Volume Trend</div><div class="panel-sub" id="proj-monthly-sub">Orders by calendar month</div></div><span class="tag">Projection</span><select id="proj-monthly-metric" class="proj-metric-sel" title="Measure"><option value="orders">By Orders</option><option value="revenue">By Revenue</option><option value="shipments">By Shipments</option></select></div>
         <div class="chart-box" style="height:270px;"><canvas id="chartProjMonthly"></canvas></div>
         <div class="loading-overlay" id="load-proj-monthly"><div class="spinner"></div></div>
       </div>
       <div class="panel" style="position:relative;">
-        <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Day-of-Week Demand Pattern</div><div class="panel-sub">Avg orders per weekday</div></div></div>
+        <div class="panel-head"><div class="panel-head-left"><div class="panel-title">Day-of-Week Demand Pattern</div><div class="panel-sub" id="proj-dow-sub">Avg orders per weekday</div></div><select id="proj-dow-metric" class="proj-metric-sel" title="Measure"><option value="orders">By Orders</option><option value="revenue">By Revenue</option><option value="shipments">By Shipments</option></select></div>
         <div class="chart-box" style="height:270px;"><canvas id="chartProjDow"></canvas></div>
         <div class="loading-overlay" id="load-proj-dow"><div class="spinner"></div></div>
       </div>
@@ -4695,10 +4696,10 @@ function _projRenderPeriodChart(actual, fc, soFarWord){
 }
 
 // 30-Day Run Rate card pills: Daywise (default) | Monthly
-window._projRRMode='daily';
+window._projRRMode='monthly';
 function _projRenderRunRate(){
   const rr=window._projRR; if(!rr) return;
-  const mode=window._projRRMode||'daily';
+  const mode=window._projRRMode||'monthly';
   const val=document.getElementById('proj-runrate'), sub=document.getElementById('proj-rr-sub'), lab=document.getElementById('proj-rr-label');
   if(mode==='monthly'){
     lab.textContent='Monthly Run Rate';
@@ -4793,32 +4794,43 @@ function _projRenderDailyChart(dailyRows, mad){
   });
 }
 
+const PROJ_METRIC={orders:{word:'orders',sub:'Orders',pre:'',fmt:v=>fmtCount(v)},revenue:{word:'revenue',sub:'Revenue',pre:'₹',fmt:v=>fmtRev(v)},shipments:{word:'shipments',sub:'Shipments',pre:'',fmt:v=>fmtCount(v)}};
 function _projRenderMonthlyChart(rows){
-  const data=rows.map(r=>({month:r.month,orders:parseInt(r.orders)||0}));
+  if(rows) window._projMonthlyRows=rows; rows=window._projMonthlyRows||[];
+  const mk=(document.getElementById('proj-monthly-metric')||{}).value||'orders', mm=PROJ_METRIC[mk];
+  const key=mk==='revenue'?'revenue':mk==='shipments'?'shipments':'orders';
+  const data=rows.map(r=>({month:r.month,v:key==='revenue'?(parseFloat(r.revenue)||0):(parseInt(r[key])||0)}));
+  const sub=document.getElementById('proj-monthly-sub'); if(sub) sub.textContent=mm.sub+' by calendar month';
   if(_projCharts.monthly) _projCharts.monthly.destroy();
   _projCharts.monthly=new Chart(document.getElementById('chartProjMonthly'),{
     type:'bar',
-    data:{labels:data.map(d=>_projFmtMonthLabel(d.month)),datasets:[{label:'Orders',data:data.map(d=>d.orders),backgroundColor:ORANGE,borderRadius:6,barThickness:28}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmtCount(c.raw)+' orders'}}},
-      scales:{x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0,autoSkip:false,font:{size:10.5}}},y:{grid:{color:LINE},ticks:{callback:v=>fmtCount(v)}}}}
+    data:{labels:data.map(d=>_projFmtMonthLabel(d.month)),datasets:[{label:mm.sub,data:data.map(d=>d.v),backgroundColor:ORANGE,borderRadius:6,barThickness:28}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>mm.fmt(c.raw)+' '+mm.word}}},
+      scales:{x:{grid:{display:false},ticks:{maxRotation:0,minRotation:0,autoSkip:false,font:{size:10.5}}},y:{grid:{color:LINE},ticks:{callback:v=>mm.fmt(v)}}}}
   });
 }
 
 function _projRenderDowChart(rows){
+  if(rows) window._projDowRows=rows; rows=window._projDowRows||[];
+  const mk=(document.getElementById('proj-dow-metric')||{}).value||'orders', mm=PROJ_METRIC[mk];
+  const f=mk==='revenue'?'avg_revenue':mk==='shipments'?'avg_shipments':'avg_orders';
   const sorted=[...rows].sort((a,b)=>parseInt(a.dow)-parseInt(b.dow));
   const labels=sorted.map(r=>PROJ_DOW_NAMES[parseInt(r.dow)]||'?');
-  const vals=sorted.map(r=>parseFloat(r.avg_orders)||0);
+  const vals=sorted.map(r=>parseFloat(r[f])||0);
+  const sub=document.getElementById('proj-dow-sub'); if(sub) sub.textContent='Avg '+mm.word+' per weekday';
   if(_projCharts.dow) _projCharts.dow.destroy();
   _projCharts.dow=new Chart(document.getElementById('chartProjDow'),{
     type:'bar',
-    data:{labels,datasets:[{label:'Avg Orders',data:vals,backgroundColor:c=>{
+    data:{labels,datasets:[{label:'Avg '+mm.sub,data:vals,backgroundColor:c=>{
       const max=Math.max(...vals,1); const v=vals[c.dataIndex]||0;
       return v>=max*.85?ORANGE_DEEP:v>=max*.6?ORANGE:AMBER;
     },borderRadius:6,barThickness:36}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmtCount(c.raw)+' orders/day avg'}}},
-      scales:{x:{grid:{display:false}},y:{grid:{color:LINE}}}}
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>mm.fmt(c.raw)+' '+mm.word+'/day avg'}}},
+      scales:{x:{grid:{display:false}},y:{grid:{color:LINE},ticks:{callback:v=>mm.fmt(v)}}}}
   });
 }
+document.getElementById('proj-monthly-metric').addEventListener('change',()=>_projRenderMonthlyChart());
+document.getElementById('proj-dow-metric').addEventListener('change',()=>_projRenderDowChart());
 
 function _projRenderChannelChart(rows){
   const months=[...new Set(rows.map(r=>r.month))].sort();
@@ -4919,10 +4931,11 @@ function _projRenderDiscountChart(rows){
   if(_projCharts.discount) _projCharts.discount.destroy();
   _projCharts.discount=new Chart(document.getElementById('chartProjDiscount'),{
     data:{labels:sorted.map(r=>r.bucket),datasets:[
-      {type:'bar',label:'Avg Daily Orders',data:sorted.map(r=>r.avgDaily),backgroundColor:ORANGE,borderRadius:6,barThickness:32,yAxisID:'y'},
-      {type:'line',label:'Avg Revenue/Order',data:sorted.map(r=>r.avgRev),borderColor:BLUE,backgroundColor:BLUE,borderWidth:2.2,pointRadius:4,yAxisID:'y1',tension:.3}
+      {type:'bar',label:'Avg Daily Orders',data:sorted.map(r=>r.avgDaily),backgroundColor:ORANGE,borderRadius:6,barThickness:32,yAxisID:'y',order:2},
+      {type:'line',label:'Avg Revenue/Order',data:sorted.map(r=>r.avgRev),borderColor:BLUE,backgroundColor:BLUE,borderWidth:2.2,pointRadius:4,pointHoverRadius:7,yAxisID:'y1',tension:.3,order:1}
     ]},
     options:{responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
       plugins:{legend:{position:'top',labels:{boxWidth:12,font:{size:10.5}}}},
       scales:{
         x:{grid:{display:false}},
