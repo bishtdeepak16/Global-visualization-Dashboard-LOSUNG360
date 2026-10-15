@@ -1337,17 +1337,25 @@ document.querySelectorAll('.nav-item').forEach(item=>{
   });
 });
 // Per-tab independent filter state
-const _tabFilters={viz:null,analytics:null,seller:null};
+// Visualisation / Seller View / Projection each own their slicer values. The one physical filter bar
+// shows the ACTIVE view's values; the other two views' values are parked in _tabFilters.
 const FILTER_IDS=['f-client','f-facility','f-marketplace','f-type','f-from','f-to'];
+const _FILTER_DEFAULTS=(()=>{ const s={}; FILTER_IDS.forEach(id=>{ const el=document.getElementById(id);
+  s[id]=(el&&el.tagName==='SELECT'&&el.options.length)?el.options[0].value:''; }); return s; })();
+const _tabFilters={viz:{..._FILTER_DEFAULTS},analytics:{..._FILTER_DEFAULTS},seller:{..._FILTER_DEFAULTS}};
 function _saveTabFilters(tab){
   const s={};
   FILTER_IDS.forEach(id=>{ const el=document.getElementById(id); if(el) s[id]=el.value; });
   _tabFilters[tab]=s;
 }
 function _restoreTabFilters(tab){
-  const s=_tabFilters[tab];
-  if(!s) return;
-  FILTER_IDS.forEach(id=>{ const el=document.getElementById(id); if(el) el.value=s[id]||''; });
+  const s=_tabFilters[tab]||_FILTER_DEFAULTS;
+  window._restoringFilters=true;           // keep the auto-reload handlers quiet while we set values
+  try{
+    const c=document.getElementById('f-client');
+    if(c){ c.value=s['f-client']||'All'; c.dispatchEvent(new Event('change')); } // re-runs the client→FC/marketplace cascade
+    FILTER_IDS.forEach(id=>{ if(id==='f-client') return; const el=document.getElementById(id); if(el) el.value=s[id]||(el.tagName==='SELECT'?el.options[0].value:''); });
+  } finally { window._restoringFilters=false; }
 }
 let _activeTab='viz';
 document.querySelectorAll('.pill-toggle').forEach(group=>{
@@ -1420,27 +1428,47 @@ function fmtPct(n){ return (parseFloat(n)||0).toFixed(1)+'%'; }
 function shortenLabel(s,max){ return s&&s.length>max?s.slice(0,max)+'…':s; }
 
 // ---- FILTERS ----
-function getFilters(){
+// getFilters(tab): filters of a given Sale Orders view ('viz' | 'seller' | 'analytics').
+// No argument => the view currently being loaded (window._loadCtx, set by _ctxCall), else the active view.
+// The active view reads the live slicers; a hidden view reads its parked values.
+function getFilters(tab){
+  tab = tab || window._loadCtx || _activeTab;
+  let s;
+  if(tab===_activeTab){ s={}; FILTER_IDS.forEach(id=>{ const el=document.getElementById(id); s[id]=el?el.value:''; }); }
+  else s=_tabFilters[tab]||_FILTER_DEFAULTS;
   // Default to YTD (Jan 1 → yesterday IST) when date inputs are left empty
   const _now    = new Date();
   const _yr     = _now.getFullYear();
   const _ytdFrom = _yr + '-01-01';
   const _ytdTo   = new Date(_now.getTime() - 86400000).toISOString().slice(0,10);
-  const rawFrom = document.getElementById('f-from').value;
-  const rawTo   = document.getElementById('f-to').value;
-  return { dateFrom:    rawFrom || _ytdFrom,
-           dateTo:      rawTo   || _ytdTo,
-           client:      document.getElementById('f-client').value,
-           city:        document.getElementById('f-facility').value,
-           marketplace: document.getElementById('f-marketplace').value,
-           orderType:   document.getElementById('f-type').value };
+  return { dateFrom:    s['f-from'] || _ytdFrom,
+           dateTo:      s['f-to']   || _ytdTo,
+           client:      s['f-client']      || 'All',
+           city:        s['f-facility']    || 'All',
+           marketplace: s['f-marketplace'] || 'All',
+           orderType:   s['f-type']        || 'All' };
 }
+// Runs fn() with fetchData's default filters pinned to one view. fn must create its fetchData calls synchronously.
+function _ctxCall(tab, fn){ const prev=window._loadCtx; window._loadCtx=tab; try{ return fn(); } finally{ window._loadCtx=prev; } }
 
-// Auto-apply when client/FC/marketplace/type change (NOT date — date needs Apply button)
+// Auto-apply when client/FC/marketplace/type change (NOT date — date needs Apply button).
+// Reloads ONLY the view whose slicer was touched; the other two views keep their own filters and data.
+function _reloadView(tab){
+  if(tab==='seller'){ window._svLoaded=true; loadSellerView(); }
+  else if(tab==='analytics'){ window._projLoaded=true; loadProjectionView(); }
+  else loadSaleOrders();
+}
+let _reloadTimer=null;
+function _onSlicerChange(){
+  if(window._restoringFilters) return;
+  const tab=_activeTab;                      // capture now, in case the user switches tab within the debounce window
+  clearTimeout(_reloadTimer);
+  _reloadTimer=setTimeout(()=>_reloadView(tab),250);
+}
 ['f-client','f-facility','f-marketplace','f-type'].forEach(id=>{
-  document.getElementById(id)?.addEventListener('change', debounce(loadSaleOrders, 250));
+  document.getElementById(id)?.addEventListener('change', _onSlicerChange);
 });
-document.getElementById('btn-apply-so').addEventListener('click', loadSaleOrders);
+document.getElementById('btn-apply-so').addEventListener('click', ()=>{ clearTimeout(_reloadTimer); _reloadView(_activeTab); });
 
 // ── COD mini-slicer reload ──────────────────────────────────
 async function reloadCOD(){
@@ -2180,9 +2208,9 @@ function _updateTrendStats(data, metricIdx) {
 }
 
 // loadMasterTrend — always daily, follows global date slicers (custom if set, else YTD)
-async function loadMasterTrend() {
+async function loadMasterTrend(fOverride) {
   showLoader('load-trend');
-  const f = getFilters(); // custom dateFrom/dateTo if set, else YTD
+  const f = fOverride || getFilters('viz'); // custom dateFrom/dateTo if set, else YTD
   const trend = await fetchData('sale_orders_trend', f);
   if (!trend || !trend.length) { hideLoader('load-trend'); return; }
 
@@ -2372,17 +2400,17 @@ async function loadSaleOrders(){
   ['kpi-total-orders','kpi-total-units','kpi-revenue','kpi-shipments','kpi-fulfillment','kpi-cancellation',
    'kpi-aov','kpi-discount','kpi-tax'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent='—'; });
 
-  const [kpi,cod,stype,byClient,byCourier,topSkus,byCat,tat,tatDist,courierSla]=await Promise.all([
+  const _f = getFilters('viz');   // Visualisation's own slicers (pinned now, so a tab switch mid-load can't change them)
+  const [kpi,cod,stype,byClient,byCourier,topSkus,byCat,tat,tatDist,courierSla]=await _ctxCall('viz',()=>Promise.all([
     fetchData('sale_orders_kpi'),
     fetchData('sale_orders_cod_prepaid'), fetchData('sale_orders_shipment_type'),
     fetchData('sale_orders_by_client'), fetchData('sale_orders_by_courier'),
     fetchData('sale_orders_top_skus'), fetchData('sale_orders_by_category'),
     fetchData('sale_orders_tat'), fetchData('sale_orders_tat_dist'), fetchData('sale_orders_courier_sla'),
-  ]);
+  ]));
   if (_isStale('so', _tok)) return; // a newer filter change already superseded this
 
   // Use effective dates from getFilters() (handles empty inputs → YTD)
-  const _f = getFilters();
   const from = _f.dateFrom, to = _f.dateTo;
   // Store raw data for metric-selector re-renders (no extra API call needed)
   _storedCatData    = byCat     || [];
@@ -2438,7 +2466,7 @@ async function loadSaleOrders(){
   }
 
   // Trend follows global date slicers — no period selector
-  loadMasterTrend();
+  loadMasterTrend(_f);
 
   if(cod && cod.length){
     const codN=parseInt(cod.find(r=>r.payment_mode==='COD')?.order_count)||0;
@@ -3594,9 +3622,9 @@ async function loadSellerView(){
     'load-sv-return-risk','load-sv-delivery-speed','load-sv-profit','load-sv-trend'];
   loaders.forEach(showLoader);
 
-  const f=getFilters();
+  const f=getFilters('seller');   // Seller View's own slicers
   const [svKpi, svStatus, svByState, svByChannel, svCodReturn,
-         svReturnRisk, svDeliverySpeed, svProfit, svDailyTrend] = await Promise.all([
+         svReturnRisk, svDeliverySpeed, svProfit, svDailyTrend] = await _ctxCall('seller',()=>Promise.all([
     fetchData('seller_kpi'),
     fetchData('seller_status_breakdown_item'),
     fetchData('seller_by_state'),
@@ -3606,7 +3634,7 @@ async function loadSellerView(){
     fetchData('seller_delivery_speed'),
     fetchData('seller_profitability'),
     fetchData('seller_daily_trend',{period:_svTrendPeriod}),
-  ]);
+  ]));
 
   // ── KPIs ─────────────────────────────────────────────────
   if(svKpi){
@@ -4506,7 +4534,8 @@ async function loadProjectionView(){
   showLoader('load-proj-channel'); showLoader('load-proj-velocity'); showLoader('load-proj-discount');
   showLoader('load-proj-reorder');
 
-  const [daily, monthly, dow, channel, velocity, discount, reorder] = await Promise.all([
+  const _fp=getFilters('analytics');   // Projection's own slicers
+  const [daily, monthly, dow, channel, velocity, discount, reorder] = await _ctxCall('analytics',()=>Promise.all([
     fetchData('projection_daily_trend'),
     fetchData('projection_monthly_trend'),
     fetchData('projection_dow_pattern'),
@@ -4514,7 +4543,7 @@ async function loadProjectionView(){
     fetchData('projection_sku_velocity'),
     fetchData('projection_discount_lift'),
     fetchData('projection_inventory_reorder'),
-  ]);
+  ]));
 
   const dailyRows=(daily||[]).map(r=>({date:r.date,orders:parseInt(r.orders)||0,units:parseInt(r.units)||0,revenue:parseFloat(r.revenue)||0}))
     .sort((a,b)=>a.date<b.date?-1:1);
@@ -4546,7 +4575,7 @@ async function loadProjectionView(){
 
   // ── Monthly Level+Trend model: powers the Forecast Accuracy + Projected Next Month KPIs
   //    and the Monthly / Quarter views of the demand chart ──
-  const M=_projBuildMonthlyModel(monthly||[], dailyRows, getFilters().dateTo);
+  const M=_projBuildMonthlyModel(monthly||[], dailyRows, _fp.dateTo);
   window._projState={dailyRows, mad, M};
 
   // 30-Day Run Rate card: Daywise = avg orders/day (last 30 days), Monthly = avg orders/month (last 3 full months)
@@ -5020,43 +5049,30 @@ function _projRenderReorderTable(rows, madUnits){
   }).join('');
 }
 
-// We hook into loadSaleOrders — after it runs, if seller is active, reload it too
-const _svFilterWatch=()=>{
-  const activeView=document.querySelector('#page-sale_orders .view.active');
-  if(activeView && activeView.id==='sale_orders-seller' && window._svLoaded){
-    loadSellerView();
-  }
-  if(activeView && activeView.id==='sale_orders-analytics' && window._projLoaded){
-    loadProjectionView();
-  }
-};
-document.getElementById('btn-apply-so').addEventListener('click',_svFilterWatch);
-['f-client','f-facility','f-marketplace','f-type'].forEach(id=>{
-  document.getElementById(id)?.addEventListener('change',_svFilterWatch);
-});
+// (Slicer → reload wiring now lives in _onSlicerChange/_reloadView near getFilters(): each view reloads only itself.)
 
 // ── Background preload sequence ──────────────────────────────────────
 // Sale Orders (Visualisation) already loads first, synchronously, in the main
-// init flow above. Everything else is staggered ~1.5s apart so their parallel
+// init flow above. Everything else is staggered ~4s apart so their parallel
 // fetch fan-outs never overlap and hit the Apps Script concurrent-execution cap.
 // Order: Visualisation → Seller View → Projection → Stock → GRN → Putaway.
 // Flags are set to true up front so a nav/tab click during preload doesn't
 // trigger a duplicate load.
 setTimeout(()=>{
   if(!window._svLoaded){ window._svLoaded=true; loadSellerView(); }
-}, 1500);
+}, 4000);
 setTimeout(()=>{
   if(!window._projLoaded){ window._projLoaded=true; loadProjectionView(); }
-}, 3000);
+}, 8000);
 setTimeout(()=>{
   if(!inventoryLoaded){ inventoryLoaded=true; loadInventory(); }
-}, 4500);
+}, 12000);
 setTimeout(()=>{
   if(!grnLoaded){ grnLoaded=true; loadGRN(); }
-}, 6000);
+}, 16000);
 setTimeout(()=>{
   if(!putawayLoaded){ putawayLoaded=true; loadPutaway(); }
-}, 7500);
+}, 20000);
 </script>
 
 
