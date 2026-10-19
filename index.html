@@ -168,6 +168,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .metric-btn.active-shipments{border-color:var(--amber);background:rgba(255,178,56,.08);color:#8B6914;}
 .metric-btn.active-revenue{border-color:var(--green);background:rgba(29,154,108,.08);color:#0F6B47;}
 .metric-btn.active-qty{border-color:var(--blue);background:rgba(62,124,177,.08);color:#1E5A8B;}
+.metric-btn.active-bad{border-color:var(--red);background:rgba(221,75,57,.08);color:#A8321F;}
 .multiselect-wrap{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-soft);font-weight:600;cursor:pointer;padding:4px 8px;border:1px solid var(--line);border-radius:7px;background:#fff;}
 .multiselect-wrap input[type=checkbox]{width:12px;height:12px;accent-color:var(--orange);cursor:pointer;}
 /* ── Trend stat KPI boxes ────────────────────────────────────── */
@@ -970,7 +971,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <!-- Inventory Type Split donut -->
     <div class="panel">
       <div class="panel-head">
-        <div class="panel-head-left"><div class="panel-title">Inventory Type Split</div><div class="panel-sub">GOOD · BAD · QC Rejected</div></div>
+        <div class="panel-head-left"><div class="panel-title">Inventory Type Split</div><div class="panel-sub">Good · Blocked · QC Rejected / Bad</div></div>
         <button class="btn-viz-export" onclick="exportInvViz('inv_type')">↓ Export Excel</button>
       </div>
       <div style="display:flex;align-items:center;gap:24px;">
@@ -991,11 +992,17 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <!-- Stock Trend line -->
     <div class="panel">
       <div class="panel-head">
-        <div class="panel-head-left"><div class="panel-title">Stock Trend over Time</div><div class="panel-sub">Daily snapshot — good inventory only</div></div>
+        <div class="panel-head-left"><div class="panel-title">Stock Trend over Time</div><div class="panel-sub" id="inv-trend-sub">Daily snapshot — Total stock (Good + Blocked + QC Rejected / Bad)</div></div>
         <button class="btn-viz-export" onclick="exportInvViz('inv_trend')">↓ Export Excel</button>
       </div>
+      <div class="metric-toggles" id="inv-trend-pills" style="margin-bottom:8px;">
+        <button class="metric-btn active-qty" data-k="total"><span class="mbdot" style="background:var(--blue)"></span>Total</button>
+        <button class="metric-btn" data-k="good"><span class="mbdot" style="background:var(--green)"></span>Good</button>
+        <button class="metric-btn" data-k="blocked"><span class="mbdot" style="background:var(--amber)"></span>Blocked</button>
+        <button class="metric-btn" data-k="bad"><span class="mbdot" style="background:var(--red)"></span>QC Rejected / Bad</button>
+      </div>
       <div id="load-inv-trend" class="loader-wrap"><div class="spin-ring"></div></div>
-      <div style="height:200px;"><canvas id="chartInvTrend"></canvas></div>
+      <div style="height:170px;"><canvas id="chartInvTrend"></canvas></div>
     </div>
   </div>
 
@@ -1011,7 +1018,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     </div>
     <div class="panel">
       <div class="panel-head">
-        <div class="panel-head-left"><div class="panel-title">Facility-wise Stock</div><div class="panel-sub">Good inventory by FC</div></div>
+        <div class="panel-head-left"><div class="panel-title">Facility-wise Stock</div><div class="panel-sub">Good · Blocked · QC Rejected / Bad by FC</div></div>
         <button class="btn-viz-export" onclick="exportInvViz('inv_facility')">↓ Export Excel</button>
       </div>
       <div id="load-inv-facility" class="loader-wrap"><div class="spin-ring"></div></div>
@@ -2393,6 +2400,18 @@ const KPI_INFO = {
     'Extra revenue per order (₹) for every 1% of discount, compared with orders that had no discount. Positive = discounted orders are bigger / worth more. Negative = discounted orders bring in less revenue per order. Calculated across discount bands (0%, 1-10%, 11-20%, 21-30%, 30%+), weighted by order count. Example: no-discount orders avg ₹500, 20%-discount orders avg ₹600 → +₹100 for 20% = ₹5 per 1%. Negative = discounts are not paying for themselves.'
 };
 document.querySelectorAll('#sale_orders-analytics .kpi-label').forEach(el => _attachInfoBtn(el, KPI_INFO[el.textContent.trim()], true));
+// ── KPI box info (Inventory page) ──
+const INV_KPI_INFO = {
+  'Total On-hand':
+    'All units in the selected clients / FCs on the snapshot date = Good + Blocked + QC Rejected / Bad. The charts below split this same total. Example: Good 9,000 + Blocked 500 + QC Rejected / Bad 500 = 10,000 units.',
+  'Blocked Qty':
+    'Units that are in the warehouse but marked as blocked in the inventory snapshot (quantity_blocked), so they are not available for new orders. The % is Blocked ÷ Total On-hand. Example: 500 blocked out of 10,000 total = 5.0%.',
+  'QC Rejected / Bad':
+    'Units whose inventory type is anything other than GOOD_INVENTORY — BAD_INVENTORY and QC_REJECTED (plus any damaged quantity). The % is this ÷ Total On-hand. Example: BAD 300 + QC rejected 200 = 500 units = 5.0% of 10,000.',
+  'Stock Health':
+    'Share of total stock that is good: Good Inventory ÷ Total On-hand. The donut centre shows the same number. Example: 9,000 good out of 10,000 total = 90.0%. Blocked and QC Rejected / Bad units both pull it down.'
+};
+document.querySelectorAll('#page-inventory .kpi-label').forEach(el => _attachInfoBtn(el, INV_KPI_INFO[el.textContent.trim()], true));
 async function loadSaleOrders(){
   const _tok = _startLoad('so');
   ['load-trend','load-cod','load-shiptype','load-client','load-courier',
@@ -2633,20 +2652,22 @@ let invTrendChart, invClientChart, invFacilityChart, invCatChart, invTypeChart;
 function initInventoryCharts() {
   invTypeChart = new Chart(document.getElementById('chartInvType'), {
     type: 'doughnut',
-    data: { labels: ['Good','Blocked','Bad/QC Rejected'], datasets: [{ data:[0,0,0], backgroundColor:[GREEN,AMBER,RED], borderWidth:0, cutout:'72%', hoverOffset:6 }] },
-    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } } }
+    data: { labels: ['Good','Blocked','QC Rejected / Bad'], datasets: [{ data:[0,0,0], backgroundColor:[GREEN,AMBER,RED], borderWidth:0, cutout:'72%', hoverOffset:6 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false },
+      tooltip:{ callbacks:{ label:c=>{ const t=c.dataset.data.reduce((a,b)=>a+b,0)||1; return c.label+': '+fmtCount(c.raw)+' ('+(c.raw*100/t).toFixed(1)+'%)'; } } } } }
   });
   invTrendChart = new Chart(document.getElementById('chartInvTrend'), {
     type: 'line',
-    data: { labels:[], datasets:[{ label:'Good Stock', data:[], borderColor:GREEN, backgroundColor:'rgba(29,154,108,.1)', fill:true, tension:0, borderWidth:2.5, pointRadius:3, pointHoverRadius:6, pointBackgroundColor:GREEN, pointBorderColor:'#fff', pointBorderWidth:1.5 }] },
-    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
+    data: { labels:[], datasets:[{ label:'Total Stock', data:[], borderColor:BLUE, backgroundColor:'rgba(62,124,177,.10)', fill:true, tension:0, borderWidth:2.5, pointRadius:3, pointHoverRadius:6, pointBackgroundColor:BLUE, pointBorderColor:'#fff', pointBorderWidth:1.5 }] },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:c=>c.dataset.label+': '+fmtCount(c.raw) } } },
       scales:{ x:{ grid:{ display:false }, ticks:{ maxTicksLimit:8,
         callback: function(val,i) {
           const lbl = this.getLabelForValue(val); if(!lbl) return '';
           const d = new Date(lbl+'T00:00:00'); if(isNaN(d)) return lbl;
           return d.getDate()+' '+_MONTHS_SHORT[d.getMonth()]+"'"+String(d.getFullYear()).slice(2);
         }
-      }}, y:{ grid:{ color:LINE } } } }
+      }}, y:{ grid:{ color:LINE }, ticks:{ callback:v=>fmtCount(v) } } } }
   });
   const hBar = { indexAxis:'y', responsive:true, maintainAspectRatio:false,
     plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label: c => fmtCount(c.raw)+' units' } } },
@@ -2664,10 +2685,19 @@ function initInventoryCharts() {
       }
     }
   });
+  // Facility-wise stock: one stacked bar per FC — Good / Blocked / QC Rejected-Bad (same buckets as the KPIs)
   invFacilityChart = new Chart(document.getElementById('chartInvFacility'), {
     type:'bar',
-    data:{ labels:[], datasets:[{ data:[], backgroundColor: PALETTE, borderRadius:5, barThickness:16 }] },
-    options:{ ...hBar, layout:{padding:{bottom:0}} }
+    data:{ labels:[], datasets:[
+      { label:'Good',              data:[], backgroundColor:GREEN, borderSkipped:false, barThickness:18 },
+      { label:'Blocked',           data:[], backgroundColor:AMBER, borderSkipped:false, barThickness:18 },
+      { label:'QC Rejected / Bad', data:[], backgroundColor:RED,   borderSkipped:false, barThickness:18 } ] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, interaction:{ mode:'index', intersect:false },
+      plugins:{ legend:{ display:true, position:'top', align:'end', labels:{ usePointStyle:true, boxWidth:8, boxHeight:8, font:{ size:11 } } },
+        tooltip:{ callbacks:{ label:c=>c.dataset.label+': '+fmtCount(c.raw)+' units',
+                              footer:items=>'Total: '+fmtCount(items.reduce((a,i)=>a+(i.raw||0),0))+' units' } } },
+      scales:{ x:{ stacked:true, grid:{ color:LINE }, ticks:{ callback: v => v>=1e5?(v/1e5).toFixed(1).replace(/\.0$/,'')+'L':v>=1000?Math.round(v/1000)+'k':v } },
+               y:{ stacked:true, grid:{ display:false }, ticks:{ font:{ size:11 } } } } }
   });
   invCatChart = new Chart(document.getElementById('chartInvCategory'), {
     type:'bar',
@@ -2676,6 +2706,31 @@ function initInventoryCharts() {
       scales:{ x:{ grid:{ display:false }, ticks:{ maxRotation:0, font:{ size:10.5 } } }, y:{ grid:{ color:LINE }, ticks:{ callback: v => v>=1e7?(v/1e7).toFixed(1)+'Cr':v>=1e5?(v/1e5).toFixed(1)+'L':v>=1000?Math.round(v/1000)+'k':v } } } }
   });
 }
+
+// ── Stock Trend: Total / Good / Blocked / QC Rejected-Bad pills (Total is the default) ──
+const INV_TREND_CFG = {
+  total:   { label:'Total Stock',       field:'total',   color:BLUE,  fill:'rgba(62,124,177,.10)', sub:'Daily snapshot — Total stock (Good + Blocked + QC Rejected / Bad)', cls:'active-qty' },
+  good:    { label:'Good Inventory',    field:'good',    color:GREEN, fill:'rgba(29,154,108,.10)', sub:'Daily snapshot — Good inventory (GOOD_INVENTORY)',                  cls:'active-revenue' },
+  blocked: { label:'Blocked',           field:'blocked', color:AMBER, fill:'rgba(255,178,56,.13)', sub:'Daily snapshot — Blocked quantity',                                 cls:'active-shipments' },
+  bad:     { label:'QC Rejected / Bad', field:'bad',     color:RED,   fill:'rgba(221,75,57,.10)',  sub:'Daily snapshot — QC Rejected / Bad inventory',                       cls:'active-bad' }
+};
+window._invTrendKey = 'total';
+function renderInvTrend() {
+  const cfg = INV_TREND_CFG[window._invTrendKey] || INV_TREND_CFG.total;
+  const rows = (window._invViz && window._invViz.trend) || [];
+  const ds = invTrendChart.data.datasets[0];
+  invTrendChart.data.labels = rows.map(r=>r.date);
+  ds.data = rows.map(r=>r[cfg.field]);
+  ds.label = cfg.label; ds.borderColor = cfg.color; ds.backgroundColor = cfg.fill; ds.pointBackgroundColor = cfg.color;
+  invTrendChart.update();
+  const sub = document.getElementById('inv-trend-sub'); if (sub) sub.textContent = cfg.sub;
+  document.querySelectorAll('#inv-trend-pills .metric-btn').forEach(b=>{
+    b.className = 'metric-btn' + (b.dataset.k===window._invTrendKey ? ' '+INV_TREND_CFG[b.dataset.k].cls : '');
+  });
+}
+document.querySelectorAll('#inv-trend-pills .metric-btn').forEach(b=>{
+  b.addEventListener('click', ()=>{ window._invTrendKey = b.dataset.k; renderInvTrend(); });
+});
 
 function getInvFilters() {
   return { client: document.getElementById('inv-client').value,
@@ -2717,67 +2772,63 @@ async function loadInventory() {
   ]);
   if (_isStale('inv', _tok)) return;
 
-  if (kpi) {
-    const good = parseFloat(kpi.good_qty)||0, blocked = parseFloat(kpi.blocked_qty)||0,
-          damaged = parseFloat(kpi.damaged_qty)||0, total = good+blocked+damaged;
-    document.getElementById('inv-kpi-onhand').textContent  = fmtCount(total);
-    document.getElementById('inv-kpi-blocked').textContent = fmtCount(blocked);
-    document.getElementById('inv-kpi-damaged').textContent = fmtCount(damaged);
-    const health = total>0 ? (good/total*100).toFixed(1)+'%' : '—';
-    document.getElementById('inv-kpi-health').textContent  = health;
-    document.getElementById('inv-kpi-blocked-pct').textContent = total>0?fmtPct(blocked/total*100)+' of total':'';
-    document.getElementById('inv-kpi-damaged-pct').textContent = total>0?fmtPct(damaged/total*100)+' of total':'';
-  }
+  // ── Single source of truth: webapp v13 returns good_qty / blocked_qty / bad_qty / total_qty for every
+  // inventory module (Good = GOOD_INVENTORY, Blocked = quantity_blocked, QC Rejected/Bad = other types + damaged).
+  // KPI boxes, donut, trend, client / FC / category charts and all their Excel exports read these same fields.
+  const _n = v => parseFloat(v)||0;
+  const _bk = r => ({ good:_n(r.good_qty), blocked:_n(r.blocked_qty), bad:_n(r.bad_qty), total:_n(r.total_qty) });
+  window._invViz = { params, trendFrom:mtdStart, trendTo:todayStr, kpi:null, byType:byType||[], trend:[], byClient:[], byFacility:[], byCat:[] };
+  const V = window._invViz;
 
-  if (byType && byType.length) {
-    const good    = parseFloat(byType.find(r=>r.inventory_type==='GOOD_INVENTORY')?.total_qty)||0;
-    const blocked = parseFloat(byType.find(r=>r.inventory_type==='BAD_INVENTORY')?.total_qty)||0;
-    const damaged = (byType.filter(r=>r.inventory_type!=='GOOD_INVENTORY'&&r.inventory_type!=='BAD_INVENTORY')
-                          .reduce((s,r)=>s+(parseFloat(r.total_qty)||0),0));
-    const t = good+blocked+damaged;
-    invTypeChart.data.datasets[0].data = [good, blocked, damaged];
+  if (kpi && kpi.bad_qty !== undefined) {
+    const k = _bk(kpi); V.kpi = k;
+    document.getElementById('inv-kpi-onhand').textContent  = fmtCount(k.total);
+    document.getElementById('inv-kpi-blocked').textContent = fmtCount(k.blocked);
+    document.getElementById('inv-kpi-damaged').textContent = fmtCount(k.bad);
+    const hv = k.total>0 ? fmtPct(k.good/k.total*100) : '—';
+    document.getElementById('inv-kpi-health').textContent  = hv;
+    document.getElementById('inv-kpi-blocked-pct').textContent = k.total>0?fmtPct(k.blocked/k.total*100)+' of total':'';
+    document.getElementById('inv-kpi-damaged-pct').textContent = k.total>0?fmtPct(k.bad/k.total*100)+' of total':'';
+    // Donut = the same numbers as the KPI boxes
+    invTypeChart.data.datasets[0].data = [k.good, k.blocked, k.bad];
     invTypeChart.update();
-    document.getElementById('inv-donut-health').textContent = t>0?fmtPct(good/t*100):'—';
-    document.getElementById('inv-lv-good').textContent    = fmtCount(good);
-    document.getElementById('inv-lv-blocked').textContent = fmtCount(blocked);
-    document.getElementById('inv-lv-damaged').textContent = fmtCount(damaged);
-    // Override the KPI box — quantity_damaged column is 0 in UC exports;
-    // actual QC Rejected / Bad comes from inventory_type rows via byType module.
-    document.getElementById('inv-kpi-damaged').textContent = fmtCount(damaged);
-    if (t > 0) document.getElementById('inv-kpi-damaged-pct').textContent = fmtPct(damaged/t*100)+' of total';
+    document.getElementById('inv-donut-health').textContent = hv;
+    document.getElementById('inv-lv-good').textContent    = fmtCount(k.good);
+    document.getElementById('inv-lv-blocked').textContent = fmtCount(k.blocked);
+    document.getElementById('inv-lv-damaged').textContent = fmtCount(k.bad);
+  } else if (kpi) {
+    console.error('[inventory_kpi] old webapp response (no bad_qty) — deploy control_tower_webapp_v13 as a New version');
+    document.getElementById('inv-kpi-health').textContent = '—';
+    const hd = document.querySelector('#inv-kpi-health')?.parentElement?.querySelector('.kpi-delta');
+    if (hd) hd.textContent = '⚠ deploy webapp v13';
   }
 
-  if (trend && trend.length) {
-    invTrendChart.data.labels = trend.map(r=>r.snapshot_date);
-    invTrendChart.data.datasets[0].data = trend.map(r=>parseFloat(r.good_qty)||0);
-    invTrendChart.update();
-  }
+  V.trend = (trend||[]).map(r=>({ date:r.snapshot_date, ..._bk(r) }));
+  renderInvTrend();
   hideLoader('load-inv-trend');
 
   // PALETTE is now a global constant
-  if (byClient && byClient.length) {
-    const top8InvClients=byClient.filter(r=>r.client_name&&r.client_name.trim()!=='').slice(0,8);
-    invClientChart.data.labels = top8InvClients.map(r=>r.client_name);
-    invClientChart.data.datasets[0].data = top8InvClients.map(r=>parseFloat(r.good_qty)||0);
-    invClientChart.data.datasets[0].backgroundColor = top8InvClients.map((_,i)=>PALETTE[i%PALETTE.length]);
-    invClientChart.update();
-  }
+  V.byClient = (byClient||[]).filter(r=>r.client_name&&r.client_name.trim()!=='').slice(0,8)
+    .map(r=>({ name:r.client_name, ..._bk(r) }));
+  invClientChart.data.labels = V.byClient.map(r=>r.name);
+  invClientChart.data.datasets[0].data = V.byClient.map(r=>r.good);
+  invClientChart.data.datasets[0].backgroundColor = V.byClient.map((_,i)=>PALETTE[i%PALETTE.length]);
+  invClientChart.update();
   hideLoader('load-inv-client');
 
-  if (byFacility && byFacility.length) {
-    const top10InvFac=byFacility.filter(r=>r.facility_code&&r.facility_code.trim()!=='').slice(0,10);
-    invFacilityChart.data.labels = top10InvFac.map(r=>r.facility_code);
-    invFacilityChart.data.datasets[0].data = top10InvFac.map(r=>parseFloat(r.good_qty)||0);
-    invFacilityChart.data.datasets[0].backgroundColor = byFacility.map((_,i)=>PALETTE[i%PALETTE.length]);
-    invFacilityChart.update();
-  }
+  V.byFacility = (byFacility||[]).filter(r=>r.facility_code&&r.facility_code.trim()!=='').slice(0,10)
+    .map(r=>({ name:r.facility_code, ..._bk(r) }));
+  invFacilityChart.data.labels = V.byFacility.map(r=>r.name);
+  invFacilityChart.data.datasets[0].data = V.byFacility.map(r=>r.good);
+  invFacilityChart.data.datasets[1].data = V.byFacility.map(r=>r.blocked);
+  invFacilityChart.data.datasets[2].data = V.byFacility.map(r=>r.bad);
+  invFacilityChart.update();
   hideLoader('load-inv-facility');
 
-  if (byCat && byCat.length) {
-    invCatChart.data.labels = byCat.map(r=>shortenLabel(r.category_name||r.category,18));
-    invCatChart.data.datasets[0].data = byCat.map(r=>parseFloat(r.good_qty)||0);
-    invCatChart.update();
-  }
+  V.byCat = (byCat||[]).map(r=>({ name:r.category_name||r.category||'Uncategorised', ..._bk(r) }));
+  invCatChart.data.labels = V.byCat.map(r=>shortenLabel(r.name,18));
+  invCatChart.data.datasets[0].data = V.byCat.map(r=>r.good);
+  invCatChart.update();
   hideLoader('load-inv-cat');
 
   // Aggregate expiry/dead items by client + facility (not per-SKU)
@@ -2820,22 +2871,44 @@ async function loadInventory() {
 }
 
 async function exportInvViz(key) {
+  // Chart exports are built from the SAME rows the visuals were drawn from (same filters, same snapshot,
+  // same MTD trend window) — so the file can never disagree with the screen or cover a longer period.
+  const V = window._invViz;
+  if (['inv_type','inv_trend','inv_client','inv_facility','inv_category'].includes(key)) {
+    if (!V) { alert('Inventory data is still loading — please try again in a moment.'); return; }
+    if (key === 'inv_trend') {
+      const rows = V.trend.map(r=>({ 'Snapshot Date':r.date, 'Total':r.total, 'Good Inventory':r.good, 'Blocked':r.blocked, 'QC Rejected / Bad':r.bad }));
+      downloadCsv(jsonToCsv(rows), 'inventory_trend_'+V.trendFrom+'_to_'+V.trendTo+'.csv'); return;
+    }
+    if (key === 'inv_type') {
+      const k = V.kpi; if (!k) { alert('Inventory data is still loading — please try again in a moment.'); return; }
+      const pc = x => k.total>0 ? (x*100/k.total).toFixed(1)+'%' : '';
+      const raw = (V.byType||[]).filter(r=>r.inventory_type);
+      const rows = [{ Bucket:'Good Inventory', Source:'inventory_type = GOOD_INVENTORY', Quantity:k.good, '% of Total':pc(k.good) }];
+      rows.push({ Bucket:'Blocked', Source:'quantity_blocked column', Quantity:k.blocked, '% of Total':pc(k.blocked) });
+      raw.filter(r=>r.inventory_type!=='GOOD_INVENTORY').forEach(r=>{
+        const q=parseFloat(r.total_qty)||0; rows.push({ Bucket:'QC Rejected / Bad', Source:'inventory_type = '+r.inventory_type, Quantity:q, '% of Total':pc(q) }); });
+      const dmg = k.bad - raw.filter(r=>r.inventory_type!=='GOOD_INVENTORY').reduce((s,r)=>s+(parseFloat(r.total_qty)||0),0);
+      if (dmg > 0) rows.push({ Bucket:'QC Rejected / Bad', Source:'quantity_damaged column', Quantity:dmg, '% of Total':pc(dmg) });
+      rows.push({ Bucket:'QC Rejected / Bad — subtotal', Source:'', Quantity:k.bad, '% of Total':pc(k.bad) });
+      rows.push({ Bucket:'TOTAL ON-HAND', Source:'Good + Blocked + QC Rejected / Bad', Quantity:k.total, '% of Total':pc(k.total) });
+      rows.push({ Bucket:'Stock Health', Source:'Good ÷ Total', Quantity:'', '% of Total':pc(k.good) });
+      downloadCsv(jsonToCsv(rows), 'inventory_type_split.csv'); return;
+    }
+    const cfg = { inv_client:{ list:V.byClient, lead:'Client', file:'inventory_by_client.csv' },
+                  inv_facility:{ list:V.byFacility, lead:'Facility', file:'inventory_by_facility.csv' },
+                  inv_category:{ list:V.byCat, lead:'Category', file:'inventory_by_category.csv' } }[key];
+    const rows = cfg.list.map(r=>({ [cfg.lead]:r.name, 'Good Inventory':r.good, 'Blocked':r.blocked, 'QC Rejected / Bad':r.bad, 'Total':r.total }));
+    downloadCsv(jsonToCsv(rows), cfg.file); return;
+  }
+  // Expiry + Dead Stock: per-SKU detail for the latest snapshot (same scope the visuals use)
   const map = {
-    inv_type:     { module:'inventory_by_type',     file:'inventory_type.csv' },
-    inv_trend:    { module:'inventory_trend',        file:'inventory_trend.csv' },
-    inv_client:   { module:'inventory_by_client',    file:'inventory_by_client.csv' },
-    inv_facility: { module:'inventory_by_facility',  file:'inventory_by_facility.csv' },
-    inv_category: { module:'inventory_by_category',  file:'inventory_by_category.csv' },
     inv_expiry:   { module:'inventory_expiry_risk',  file:'inventory_expiry_risk.csv' },
     inv_dead:     { module:'inventory_dead_stock',   file:'inventory_dead_stock.csv' },
   };
   const cfg = map[key]; if(!cfg) return;
-  // Expiry + Dead Stock always export today's latest snapshot with full per-SKU detail
   const f = getInvFilters();
-  const params = (key === 'inv_expiry' || key === 'inv_dead')
-    ? { client: f.client, city: f.city }   // no snapshotDate → always MAX(snapshot_date)
-    : f;
-  const rows = await fetchData(cfg.module, params, true);
+  const rows = await fetchData(cfg.module, { client: f.client, city: f.city }, true);   // no snapshotDate → latest
   if (rows) downloadCsv(jsonToCsv(rows), cfg.file);
 }
 
