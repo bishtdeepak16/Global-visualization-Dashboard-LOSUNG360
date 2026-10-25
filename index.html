@@ -173,7 +173,15 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .q-card{position:relative;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;background:#fff;transition:.15s;border-left-width:5px;}
 .q-dl{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:7px;border:1px solid var(--line);background:#fff;color:var(--ink-soft);font-size:14px;cursor:pointer;line-height:1;}
 .q-dl:hover{background:var(--orange);color:#fff;border-color:var(--orange);}
-.q-bars{display:flex;flex-direction:column;gap:12px;margin:6px 0 4px;} .q-bar-t{font:700 11px Inter,sans-serif;color:var(--ink-soft);margin-bottom:4px;}
+.q-warn{display:none;background:#FFF1EC;border:1.5px solid #DD4B39;color:#8A2A1B;border-radius:10px;padding:10px 14px;font:700 12px Inter,sans-serif;margin-bottom:10px;}
+.q-grid{position:relative;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:240px 240px;gap:0;margin:4px 0 4px 26px;border-radius:12px;overflow:hidden;border:1px solid var(--line);}
+.q-cell{position:relative;display:flex;align-items:center;justify-content:center;}
+.q-cell .qc-t{position:absolute;top:8px;left:12px;font:800 11.5px Inter,sans-serif;letter-spacing:.04em;text-transform:uppercase;} .q-cell .qc-p{position:absolute;bottom:8px;right:12px;font:700 11px Inter,sans-serif;color:var(--ink-soft);}
+.q-bub{border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font:800 15px Inter,sans-serif;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.14);transition:transform .15s;} .q-bub:hover{transform:scale(1.05);}
+.q-axy{position:absolute;left:-2px;top:50%;transform:translate(-50%,-50%) rotate(-90deg);font:700 11px Inter,sans-serif;color:var(--ink-soft);white-space:nowrap;}
+.q-axx{text-align:center;font:700 11px Inter,sans-serif;color:var(--ink-soft);margin:4px 0 0 26px;}
+.q-tip{position:fixed;z-index:9999;pointer-events:none;background:#1f1a17;color:#fff;border-radius:10px;padding:10px 12px;font:600 11.5px Inter,sans-serif;line-height:1.55;box-shadow:0 8px 24px rgba(0,0,0,.3);display:none;max-width:300px;}
+.q-empty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;font:700 13px Inter,sans-serif;color:var(--ink-soft);padding:30px;} .q-bar-t{font:700 11px Inter,sans-serif;color:var(--ink-soft);margin-bottom:4px;}
 .q-bar{display:flex;height:44px;border-radius:10px;overflow:hidden;background:#eee;} .q-seg{display:flex;flex-direction:column;justify-content:center;padding:0 8px;color:#fff;font:800 12px Inter,sans-serif;overflow:hidden;white-space:nowrap;min-width:0;} .q-seg small{font:600 10px Inter,sans-serif;opacity:.92;}
 .q-tt{font:800 13px Inter,sans-serif;margin:14px 0 2px;color:var(--ink);}
 .q-card:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.07);} .q-card.on{background:rgba(255,106,50,.06);box-shadow:0 0 0 2px var(--orange) inset;}
@@ -1105,8 +1113,10 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     </div>
     <div id="load-inv-quad" class="loader-wrap"><div class="spin-ring"></div></div>
     <div class="q-cards" id="q-cards"></div>
-    <div id="q-portion" class="q-bars"></div>
-    <div id="q-skuview" style="display:none"><div class="q-wrap"><canvas id="chartQuad"></canvas></div></div>
+    <div class="q-warn" id="q-warn"></div>
+    <div id="q-portion"><div style="position:relative"><div class="q-axy">Sales ↑ higher</div><div class="q-grid" id="q-grid"></div></div><div class="q-axx">Good stock → higher &nbsp;·&nbsp; bubble size = share of total good stock</div></div>
+    <div id="q-skuview" style="display:none"><div class="q-wrap"><canvas id="chartQuad"></canvas><div class="q-empty" id="q-empty"></div></div></div>
+    <div class="q-tip" id="q-tip"></div>
     <div class="panel-sub" id="q-note" style="margin-top:8px;"></div>
     <div class="q-tt" id="q-tt"></div><div class="panel-sub" id="q-tts"></div>
     <div class="q-tbl"><table><thead><tr><th>SKU</th><th>Name</th><th>Client</th><th style="text-align:right">Good stock</th><th style="text-align:right" id="q-th-s">Sales</th><th style="text-align:right">Cover (days)</th></tr></thead><tbody id="q-body"></tbody></table></div>
@@ -2336,7 +2346,7 @@ const PANEL_INFO = {
   'Expiry-at-Risk Stock':
     'Items expiring within 90 days of today, bucketed into 3 slabs — <30 days is most urgent. Based on batch expiry dates recorded at GRN.',
   'Sales vs Inventory Matrix':
-    'Shows where your good stock sits compared with how fast it sells. Every sellable SKU with stock is placed in one of 4 boxes using two median lines: stock (right = more) and sales (up = more), sales counted over the last 30 or 60 days (toggle). WORKHORSE = high sales + high stock: core movers, keep available. RISING STAR = high sales + low stock: selling fast on thin stock, replenish first. NICHE = low sales + low stock: small balanced lines, keep lean. REVIEW = low sales + high stock: cash locked in slow or unsold stock, liquidate, bundle or stop buying. PORTION (default) shows what share of stock, sales and SKUs each box holds. SKUs shows the scatter: one dot per SKU, only SKUs that sold in the last 60 days (others would clutter it, but they are still counted in Portion and in downloads). Click a box to list its top 50 SKUs below; the download icon on a box exports every SKU in it with stock, 30d and 60d sales, daily average and cover days. Packaging and raw material are excluded; client and city filters apply.',
+    'Shows where your good stock sits compared with how fast it sells. Every sellable SKU with stock is placed in one of 4 boxes using two median lines: stock (right = more) and sales (up = more), sales counted over the last 30 or 60 days (toggle). WORKHORSE = high sales + high stock: core movers, keep available. RISING STAR = high sales + low stock: selling fast on thin stock, replenish first. NICHE = low sales + low stock: small balanced lines, keep lean. REVIEW = low sales + high stock: cash locked in slow or unsold stock, liquidate, bundle or stop buying. PORTION (default) draws the same 4 boxes with one bubble each: bubble size = the share of total good stock held by that box; hover a bubble for units, SKUs, sales, share of sales and cover days. SKUs shows the scatter: one dot per SKU, only SKUs that sold in the last 60 days (others would clutter it, but they are still counted in Portion and in downloads). Click a box to list its top 50 SKUs below; the download icon on a box exports every SKU in it with stock, 30d and 60d sales, daily average and cover days. Packaging and raw material are excluded; client and city filters apply.',
   // ── Putaway ───────────────────────────────────────────────────────
   'Putaway Type Split':
     'Breakdown of putaway operations by origin type — GRN (fresh inbound), Returns (customer returns), Shelf Transfer (internal moves) etc.',
@@ -2844,6 +2854,9 @@ const Q_KEYS=['risk','star','slow','over'];
 function _median(a){ if(!a.length) return 0; const b=a.slice().sort((x,y)=>x-y), m=b.length>>1; return b.length%2?b[m]:(b[m-1]+b[m])/2; }
 function quadSet(rows) {
   const n=v=>parseFloat(v)||0;
+  const warn=document.getElementById('q-warn');
+  warn.style.display = (rows&&rows.length&&rows[0].sales_30===undefined)?'block':'none';
+  warn.textContent = 'This dashboard is newer than the Apps Script web app: sales columns are missing, so every SKU looks unsold. Paste control_tower_webapp_v16.gs and deploy it as a New version.';
   _quad.raw=(rows||[]).map(x=>({sku:x.item_sku_code,name:x.sku_name||x.item_sku_code,client:x.client_name||'',l1:x.l1||'',inv:n(x.inv_qty),s30:n(x.sales_30),s60:n(x.sales_60)})).filter(x=>x.inv>0);
   quadClassify(); hideLoader('load-inv-quad');
 }
@@ -2866,12 +2879,20 @@ function quadRender() {
   const {A,T}=_qAgg(), pc=(v,t)=>t?(v*100/t):0, pf=v=>v.toFixed(1)+'%';
   document.getElementById('q-cards').innerHTML=Q_KEYS.map(k=>'<div class="q-card'+(_quad.sel===k?' on':'')+'" data-k="'+k+'" style="border-left-color:'+Q_DEF[k].c+'"><button class="q-dl" data-dl="'+k+'" title="Download these SKUs (Excel)">⬇</button><h4>'+Q_DEF[k].t+'</h4><div class="qs">'+Q_DEF[k].s+'</div><div class="qn">'+pf(pc(A[k].u,T.u))+' <span class="qm">of stock</span></div><div class="qm">'+fmtCount(A[k].u)+' units · '+fmtCount(A[k].n)+' SKUs</div><div class="qm" style="margin-top:5px;font-style:italic">'+Q_DEF[k].a+'</div></div>').join('');
   document.getElementById('q-sub').textContent = _quad.view==='portion'
-    ? 'How your good stock, sales and SKUs split across the 4 boxes · sales = last '+_quad.days+' days'
+    ? 'Bubble size = share of good stock in each box · sales = last '+_quad.days+' days'
     : 'Each dot = one SKU sold in the last 60 days · sales = last '+_quad.days+' days';
-  // Portion view: three 100% bars (stock / sales / SKUs)
-  const bar=(t,key,tot,fmt)=>'<div><div class="q-bar-t">'+t+'</div><div class="q-bar">'+Q_KEYS.map(k=>{const v=A[k][key],w=pc(v,tot); return '<div class="q-seg" style="width:'+w+'%;background:'+Q_DEF[k].c+'" title="'+Q_DEF[k].t+': '+fmtCount(v)+' ('+pf(w)+')">'+(w>=7?Q_DEF[k].t+'<small>'+pf(w)+' · '+fmtCount(v)+'</small>':'')+'</div>';}).join('')+'</div></div>';
-  document.getElementById('q-portion').innerHTML = bar('Share of good stock (units)','u',T.u)+bar('Share of sales — last '+_quad.days+' days (units)','s',T.s)+bar('Share of SKUs','n',T.n);
-  document.getElementById('q-portion').style.display = _quad.view==='portion'?'flex':'none';
+  // Portion view: 2x2 quadrant, one bubble per box, bubble AREA = share of good stock
+  const POS={risk:0,star:1,slow:2,over:3}, D100=210;
+  const grid=document.getElementById('q-grid'); grid.innerHTML='';
+  Q_KEYS.slice().sort((a,b)=>POS[a]-POS[b]).forEach(k=>{
+    const w=pc(A[k].u,T.u), dia=A[k].u>0?Math.max(30,D100*Math.sqrt(w/100)):0;
+    const cell=document.createElement('div'); cell.className='q-cell'; cell.style.background=Q_DEF[k].c+'14';
+    cell.innerHTML='<div class="qc-t" style="color:'+Q_DEF[k].c+'">'+Q_DEF[k].t+'</div><div class="qc-p">'+Q_DEF[k].s+'</div>';
+    if(dia){ const bu=document.createElement('div'); bu.className='q-bub'; bu.style.cssText='width:'+dia+'px;height:'+dia+'px;background:'+Q_DEF[k].c+'E0;'; bu.textContent=dia>=56?pf(w):'';
+      bu.dataset.k=k; cell.appendChild(bu); }
+    grid.appendChild(cell); });
+  window._qAggCache={A,T};
+  document.getElementById('q-portion').style.display = _quad.view==='portion'?'block':'none';
   document.getElementById('q-skuview').style.display = _quad.view==='sku'?'block':'none';
   const r=_quad.rows, plotted=r.filter(x=>x.active);
   document.getElementById('q-note').textContent = 'Dashed lines = medians: stock '+fmtCount(Math.round(_quad.medI))+' units (SKUs sold in last 60d), sales '+fmtCount(Math.round(_quad.medS))+' units (SKUs that sold in last '+_quad.days+'d). '+fmtCount(r.length-plotted.length)+' stocked SKUs with no sale in 60 days are not plotted but are counted in Portion and the downloads (they fall in Review / Niche).';
@@ -2885,6 +2906,8 @@ function quadRender() {
   document.getElementById('q-body').innerHTML=list.length?list.map(x=>'<tr><td>'+x.sku+'</td><td>'+x.name.slice(0,70)+'</td><td>'+x.client+'</td><td class="n">'+fmtCount(x.inv)+'</td><td class="n">'+fmtCount(x.sales)+'</td><td class="n">'+(x.cover==null?'—':fmtCount(x.cover))+'</td></tr>').join(''):'<tr><td colspan="6" style="text-align:center;padding:18px;color:var(--ink-soft)">No SKUs in this box</td></tr>';
 }
 function quadChart(pl) {
+  const em=document.getElementById('q-empty'); em.style.display=pl.length?'none':'flex';
+  if(!pl.length){ em.textContent='No SKU has sold in the last 60 days for this selection, so there is nothing to plot. Check the Portion view or the downloads.'; if(_quad.chart){ _quad.chart.data.datasets.forEach(d=>d.data=[]); _quad.chart.update(); } return; }
   const FL=0.5, yv=x=>x.sales>0?x.sales:FL;
   const data={ datasets:Q_KEYS.map(k=>({label:Q_DEF[k].t,data:pl.filter(x=>x.q===k).map(x=>({x:x.inv,y:yv(x),d:x})),backgroundColor:Q_DEF[k].c+'B3',borderColor:Q_DEF[k].c,pointRadius:4,pointHoverRadius:7})) };
   // symmetric log ranges around the medians → the dashed cross always sits in the middle of the chart
@@ -2919,6 +2942,15 @@ function quadExportRows(key) {
 document.getElementById('q-cards').addEventListener('click',e=>{
   const dl=e.target.closest('.q-dl'); if(dl){ e.stopPropagation(); const r=quadExportRows(dl.dataset.dl); if(!r.length){alert('No SKUs in this box.');return;} downloadCsv(jsonToCsv(r),'sales_vs_inventory_'+Q_DEF[dl.dataset.dl].t.toLowerCase().replace(/ /g,'_')+'.csv'); return; }
   const c=e.target.closest('.q-card'); if(c){ _quad.sel=c.dataset.k; quadRender(); } });
+(function(){ const tip=document.getElementById('q-tip'), grid=document.getElementById('q-grid');
+  grid.addEventListener('mousemove',e=>{ const b=e.target.closest('.q-bub'); if(!b){ tip.style.display='none'; return; }
+    const k=b.dataset.k, {A,T}=window._qAggCache, a=A[k], d=_quad.days, pf=(v,t)=>(t?v*100/t:0).toFixed(1)+'%';
+    const cover=a.s>0?Math.round(a.u/(a.s/d)):null;
+    tip.innerHTML='<b style="color:'+Q_DEF[k].c+'">'+Q_DEF[k].t+'</b> <span style="opacity:.7">· '+Q_DEF[k].s+'</span><br>Good stock: <b>'+fmtCount(a.u)+'</b> units ('+pf(a.u,T.u)+' of total)<br>SKUs: <b>'+fmtCount(a.n)+'</b> ('+pf(a.n,T.n)+' of SKUs)<br>Sales ('+d+'d): <b>'+fmtCount(a.s)+'</b> units ('+pf(a.s,T.s)+' of sales)<br>Stock cover: <b>'+(cover==null?'no sales':fmtCount(cover)+' days')+'</b><br><i style="opacity:.85">'+Q_DEF[k].a+'</i><br><span style="opacity:.6">Click to list its top SKUs</span>';
+    tip.style.display='block'; tip.style.left=Math.min(e.clientX+16,innerWidth-320)+'px'; tip.style.top=(e.clientY+16)+'px'; });
+  grid.addEventListener('mouseleave',()=>tip.style.display='none');
+  grid.addEventListener('click',e=>{ const b=e.target.closest('.q-bub'); if(b){ _quad.sel=b.dataset.k; quadRender(); } });
+})();
 document.querySelectorAll('#q-days button').forEach(b=>b.addEventListener('click',()=>{
   _quad.days=+b.dataset.d; document.querySelectorAll('#q-days button').forEach(x=>x.classList.toggle('active',x===b)); quadClassify(); }));
 document.querySelectorAll('#q-view button').forEach(b=>b.addEventListener('click',()=>{
