@@ -168,6 +168,15 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .metric-btn.active-shipments{border-color:var(--amber);background:rgba(255,178,56,.08);color:#8B6914;}
 .metric-btn.active-revenue{border-color:var(--green);background:rgba(29,154,108,.08);color:#0F6B47;}
 .metric-btn.active-qty{border-color:var(--blue);background:rgba(62,124,177,.08);color:#1E5A8B;}
+.q-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;}
+@media(max-width:900px){.q-cards{grid-template-columns:repeat(2,1fr);}}
+.q-card{border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;background:#fff;transition:.15s;border-left-width:5px;}
+.q-card:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.07);} .q-card.on{background:rgba(255,106,50,.06);box-shadow:0 0 0 2px var(--orange) inset;}
+.q-card h4{margin:0;font:800 12px Inter,sans-serif;color:var(--ink);} .q-card .qs{font:600 10.5px Inter,sans-serif;color:var(--ink-soft);margin:1px 0 6px;}
+.q-card .qn{font:800 20px Sora,sans-serif;color:var(--ink);} .q-card .qm{font:600 10.5px Inter,sans-serif;color:var(--ink-soft);}
+.q-wrap{position:relative;height:430px;} .q-tbl{margin-top:12px;max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:10px;}
+.q-tbl table{width:100%;border-collapse:collapse;font-size:12px;} .q-tbl th{position:sticky;top:0;background:#faf6f1;text-align:left;padding:7px 10px;font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;}
+.q-tbl td{padding:6px 10px;border-top:1px solid var(--line);} .q-tbl td.n{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;}
 .tax-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:2px 0 8px;}
 .tax-bar select:disabled{opacity:.5;cursor:not-allowed;}
 .tax-chk{font:600 11px Inter,sans-serif;color:var(--ink-soft);display:flex;align-items:center;gap:5px;cursor:pointer;margin-left:auto;}
@@ -1067,7 +1076,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   </div>
 
   <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Risk Monitoring</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
-  <div class="grid grid-2b" style="margin-bottom:14px;">
+  <div class="grid" style="margin-bottom:14px;grid-template-columns:1fr;">
     <!-- Expiry at Risk -->
     <div class="panel">
       <div class="panel-head">
@@ -1080,16 +1089,20 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <div class="expiry-slab watch"><div class="slab-badge">🟡 60–90 Days</div><div id="inv-exp-90">Loading…</div></div>
       </div>
     </div>
-    <!-- Dead Stock -->
-    <div class="panel">
-      <div class="panel-head">
-        <div class="panel-head-left"><div class="panel-title">Dead Stock</div><div class="panel-sub">SKUs with 0 sale orders in last 30 days</div></div>
-        <button class="btn-viz-export" onclick="exportInvViz('inv_dead')">↓ Export Excel</button>
-      </div>
-      <div id="inv-dead-table" style="max-height:260px;overflow-y:auto;">
-        <div style="text-align:center;color:var(--ink-soft);padding:40px;font-size:13px;">Loading…</div>
+  </div>
+  <div class="panel" style="margin-bottom:14px;">
+    <div class="panel-head">
+      <div class="panel-head-left"><div class="panel-title">Sales vs Inventory Matrix</div><div class="panel-sub" id="q-sub">Every SKU placed by sales (up) and good inventory (right)</div></div>
+      <div class="panel-head-right">
+        <div class="inv-rng" id="q-days"><button data-d="30" class="active">30d</button><button data-d="60">60d</button><button data-d="90">90d</button></div>
+        <button class="btn-viz-export" onclick="exportInvViz('inv_quadrant')">↓ Export Excel</button>
       </div>
     </div>
+    <div id="load-inv-quad" class="loader-wrap"><div class="spin-ring"></div></div>
+    <div class="q-cards" id="q-cards"></div>
+    <div class="q-wrap"><canvas id="chartQuad"></canvas></div>
+    <div class="panel-sub" id="q-note" style="margin-top:8px;"></div>
+    <div class="q-tbl"><table><thead><tr><th>SKU</th><th>Name</th><th>Client</th><th style="text-align:right">Good stock</th><th style="text-align:right">Sales</th><th style="text-align:right">Cover (days)</th></tr></thead><tbody id="q-body"></tbody></table></div>
   </div>
 </div>
 
@@ -2314,8 +2327,8 @@ const PANEL_INFO = {
     'Good inventory grouped by product category. Useful for spotting which categories have high holding vs low holding.',
   'Expiry-at-Risk Stock':
     'Items expiring within 90 days of today, bucketed into 3 slabs — <30 days is most urgent. Based on batch expiry dates recorded at GRN.',
-  'Dead Stock':
-    'SKUs with zero sale orders in the last 30 days but still holding inventory. These are slow-moving or stuck items that may need attention.',
+  'Sales vs Inventory Matrix':
+    'Each dot is a SKU. Up = more units sold (selected period), right = more good stock. Dashed lines are the medians (sales median is taken over SKUs that sold at least once). Top-left Rising Star: selling fast on low stock. Top-right Workhorse: high sales on high stock. Bottom-left Emerging: small or new. Bottom-right Review: lots of stock, little or no sale. Packaging and raw material are excluded.',
   // ── Putaway ───────────────────────────────────────────────────────
   'Putaway Type Split':
     'Breakdown of putaway operations by origin type — GRN (fresh inbound), Returns (customer returns), Shelf Transfer (internal moves) etc.',
@@ -2811,6 +2824,57 @@ document.getElementById('tax-legend').addEventListener('click',e=>{ const r=e.ta
 document.getElementById('tax-crumb').addEventListener('click',e=>{ const a=e.target.closest('a'); if(!a) return;
   const c=+a.dataset.c; for(let k=c;k<3;k++) _tax.sel[k]=''; taxRender(); });
 
+
+// ══ Sales vs Inventory quadrant ══
+const _quad = { days:30, rows:[], medI:0, medS:0, sel:'over', chart:null };
+const Q_DEF = {
+  star:{ t:'Workhorse', s:'High sales · High stock', a:'Core movers — keep stocked, protect availability', c:'#1D9A6C' },
+  risk:{ t:'Rising Star', s:'High sales · Low stock', a:'Selling fast on thin stock — replenish first', c:'#FFB238' },
+  slow:{ t:'Emerging', s:'Low sales · Low stock', a:'Small or new — watch, test demand', c:'#3E7CB1' },
+  over:{ t:'Review', s:'Low sales · High stock', a:'Cash locked in stock — liquidate, bundle or stop buying', c:'#DD4B39' } };
+function _median(a){ if(!a.length) return 0; const b=a.slice().sort((x,y)=>x-y), m=b.length>>1; return b.length%2?b[m]:(b[m-1]+b[m])/2; }
+function quadSet(rows) {
+  const n=v=>parseFloat(v)||0;
+  const r=(rows||[]).map(x=>({sku:x.item_sku_code,name:x.sku_name||x.item_sku_code,client:x.client_name||'',l1:x.l1||'',inv:n(x.inv_qty),sales:n(x.sales_qty)})).filter(x=>x.inv>0);
+  _quad.medI=_median(r.map(x=>x.inv)); _quad.medS=_median(r.filter(x=>x.sales>0).map(x=>x.sales))||1;
+  r.forEach(x=>{ const hs=x.sales>=_quad.medS && x.sales>0, hi=x.inv>=_quad.medI;
+    x.q = hs ? (hi?'star':'risk') : (hi?'over':'slow'); x.cover = x.sales>0 ? Math.round(x.inv/(x.sales/_quad.days)) : null; });
+  _quad.rows=r; quadRender(); hideLoader('load-inv-quad');
+}
+function quadRender() {
+  const r=_quad.rows, tot=r.reduce((a,x)=>a+x.inv,0), keys=['risk','star','slow','over'];
+  const agg={}; keys.forEach(k=>agg[k]={n:0,u:0}); r.forEach(x=>{agg[x.q].n++; agg[x.q].u+=x.inv;});
+  document.getElementById('q-cards').innerHTML=keys.map(k=>'<div class="q-card'+(_quad.sel===k?' on':'')+'" data-k="'+k+'" style="border-left-color:'+Q_DEF[k].c+'"><h4>'+Q_DEF[k].t+'</h4><div class="qs">'+Q_DEF[k].s+'</div><div class="qn">'+fmtCount(agg[k].n)+' <span class="qm">SKUs</span></div><div class="qm">'+fmtCount(agg[k].u)+' units · '+(tot?(agg[k].u*100/tot).toFixed(1):0)+'% of stock</div><div class="qm" style="margin-top:5px;font-style:italic">'+Q_DEF[k].a+'</div></div>').join('');
+  document.getElementById('q-sub').textContent='Last '+_quad.days+' days sales vs good inventory · '+fmtCount(r.length)+' sellable SKUs with stock';
+  document.getElementById('q-note').textContent='Median stock: '+fmtCount(Math.round(_quad.medI))+' units · Median sales (SKUs that sold): '+fmtCount(Math.round(_quad.medS))+' units. '+fmtCount(r.filter(x=>x.sales===0).length)+' SKUs had zero sales.';
+  const pts=k=>r.filter(x=>x.q===k).map(x=>({x:x.inv,y:x.sales>0?x.sales:0.5,d:x}));
+  const data={ datasets:keys.map(k=>({label:Q_DEF[k].t,data:pts(k),backgroundColor:Q_DEF[k].c+'B3',borderColor:Q_DEF[k].c,pointRadius:3.5,pointHoverRadius:6})) };
+  if(!_quad.chart){
+    const plug={ id:'quadBg', beforeDatasetsDraw(ch){ const {ctx,chartArea:a,scales:{x,y}}=ch; if(!a) return;
+        const mx=Math.min(Math.max(x.getPixelForValue(_quad.medI),a.left),a.right), my=Math.min(Math.max(y.getPixelForValue(_quad.medS),a.top),a.bottom);
+        const box=(x0,y0,x1,y1,c)=>{ctx.fillStyle=c;ctx.fillRect(x0,y0,x1-x0,y1-y0);};
+        box(a.left,a.top,mx,my,Q_DEF.risk.c+'14'); box(mx,a.top,a.right,my,Q_DEF.star.c+'14'); box(a.left,my,mx,a.bottom,Q_DEF.slow.c+'12'); box(mx,my,a.right,a.bottom,Q_DEF.over.c+'14');
+        ctx.save(); ctx.strokeStyle='#8a7f75'; ctx.setLineDash([6,5]); ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(mx,a.top); ctx.lineTo(mx,a.bottom); ctx.moveTo(a.left,my); ctx.lineTo(a.right,my); ctx.stroke(); ctx.restore();
+        ctx.save(); ctx.font='800 12px Inter,sans-serif'; const lab=(t,k,px,py,al)=>{ctx.fillStyle=Q_DEF[k].c; ctx.textAlign=al; ctx.fillText(t,px,py);};
+        lab('RISING STAR','risk',a.left+10,a.top+18,'left'); lab('WORKHORSE','star',a.right-10,a.top+18,'right'); lab('EMERGING','slow',a.left+10,a.bottom-10,'left'); lab('REVIEW','over',a.right-10,a.bottom-10,'right'); ctx.restore(); } };
+    _quad.chart=new Chart(document.getElementById('chartQuad'),{ type:'scatter', data, plugins:[plug],
+      options:{ responsive:true, maintainAspectRatio:false, animation:false,
+        scales:{ x:{type:'logarithmic',title:{display:true,text:'Good inventory (units) →  higher stock',font:{weight:'700'}},ticks:{callback:v=>[1,10,100,1000,10000,100000,1000000].includes(v)?fmtCount(v):''}},
+                 y:{type:'logarithmic',title:{display:true,text:'Units sold ↑ (bottom row = zero sales)',font:{weight:'700'}},min:0.3,ticks:{callback:v=>[1,10,100,1000,10000,100000].includes(v)?fmtCount(v):''}} },
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ title:i=>i[0].raw.d.sku, label:i=>{const d=i.raw.d; return [d.name.slice(0,60), (d.client?d.client+' · ':'')+(d.l1||''), 'Good stock: '+fmtCount(d.inv), 'Sales ('+_quad.days+'d): '+fmtCount(d.sales), 'Cover: '+(d.cover==null?'no sales':d.cover+' days'), Q_DEF[d.q].t];} } } },
+        onClick:(e,els)=>{ if(els.length){ _quad.sel=els[0].element.$context.raw.d.q; quadRender(); } } } });
+  } else { _quad.chart.data=data; _quad.chart.update(); }
+  const list=r.filter(x=>x.q===_quad.sel).sort((a,b)=>_quad.sel==='risk'||_quad.sel==='star'?b.sales-a.sales:b.inv-a.inv).slice(0,50);
+  document.getElementById('q-body').innerHTML=list.length?list.map(x=>'<tr><td>'+x.sku+'</td><td>'+x.name.slice(0,70)+'</td><td>'+x.client+'</td><td class="n">'+fmtCount(x.inv)+'</td><td class="n">'+fmtCount(x.sales)+'</td><td class="n">'+(x.cover==null?'—':fmtCount(x.cover))+'</td></tr>').join(''):'<tr><td colspan="6" style="text-align:center;padding:18px;color:var(--ink-soft)">No SKUs in this quadrant</td></tr>';
+}
+function quadExportRows() {
+  return _quad.rows.slice().sort((a,b)=>b.inv-a.inv).map(x=>({ 'SKU':x.sku,'Name':x.name,'Client':x.client,'Parent Category':x.l1,'Quadrant':Q_DEF[x.q].t,'Good Inventory':x.inv,['Sales (last '+_quad.days+'d)']:x.sales,'Cover (days)':x.cover==null?'':x.cover }));
+}
+document.getElementById('q-cards').addEventListener('click',e=>{ const c=e.target.closest('.q-card'); if(c){ _quad.sel=c.dataset.k; quadRender(); } });
+document.querySelectorAll('#q-days button').forEach(b=>b.addEventListener('click',async()=>{
+  _quad.days=+b.dataset.d; document.querySelectorAll('#q-days button').forEach(x=>x.classList.toggle('active',x===b));
+  const f=getInvFilters(); const rows=await fetchData('inventory_quadrant',{client:f.client,city:f.city,days:_quad.days},true); if(rows) quadSet(rows); }));
+
 // ── Stock Trend: Total / Good / Blocked / QC Rejected-Bad pills (Total is the default) ──
 const INV_TREND_CFG = {
   total:   { label:'Total Stock',       field:'total',   color:BLUE,  fill:'rgba(62,124,177,.10)', what:'Total stock (Good + Blocked + QC Rejected / Bad)', cls:'active-qty' },
@@ -2904,7 +2968,7 @@ async function loadInventory() {
   // invWhere defaults to MAX(snapshot_date) when no snapshotDate is passed.
   const todayInvParams = { client: f.client, city: f.city };
 
-  const [kpi, byType, trend, byClient, byFacility, byCat, expiry, dead] = await Promise.all([
+  const [kpi, byType, trend, byClient, byFacility, byCat, expiry, quad] = await Promise.all([
     fetchData('inventory_kpi', params, true),
     fetchData('inventory_by_type', params, true),
     fetchData('inventory_trend', trendParams, true),
@@ -2912,7 +2976,7 @@ async function loadInventory() {
     fetchData('inventory_by_facility', params, true),
     fetchData('inventory_taxonomy', params, true),
     fetchData('inventory_expiry_risk', todayInvParams, true),
-    fetchData('inventory_dead_stock', todayInvParams, true),
+    fetchData('inventory_quadrant', { ...todayInvParams, days:_quad.days }, true),
   ]);
   if (_isStale('inv', _tok)) return;
 
@@ -3005,20 +3069,14 @@ async function loadInventory() {
       '</div>';
   });
 
-  // Dead stock — grouped by client + FC
-  const deadEl = document.getElementById('inv-dead-table');
-  const deadGrouped = _aggByClientFc(dead);
-  if (!deadGrouped.length) {
-    deadEl.innerHTML='<div style="text-align:center;color:var(--green);padding:30px;font-size:13px;font-weight:700;">✓ No dead stock detected</div>';
-  } else {
-    deadEl.innerHTML = deadGrouped.map(r=>`<div class="dead-row"><div><div class="dead-sku">${r.client_name}</div><div class="dead-fc">${r.city}</div></div><div class="dead-qty">${fmtCount(r.total_units)} <span style="font-size:10px;color:var(--ink-soft);font-weight:600;">units</span></div></div>`).join('');
-  }
+  quadSet(quad);
 }
 
 async function exportInvViz(key) {
   // Chart exports are built from the SAME rows the visuals were drawn from (same filters, same snapshot,
   // same MTD trend window) — so the file can never disagree with the screen or cover a longer period.
   const V = window._invViz;
+  if (key === 'inv_quadrant') { const r = quadExportRows(); if(!r.length){ alert('No data yet.'); return; } downloadCsv(jsonToCsv(r),'sales_vs_inventory_matrix.csv'); return; }
   if (['inv_type','inv_trend','inv_client','inv_facility','inv_category'].includes(key)) {
     if (!V) { alert('Inventory data is still loading — please try again in a moment.'); return; }
     if (key === 'inv_trend') {
@@ -3056,7 +3114,6 @@ async function exportInvViz(key) {
   // Expiry + Dead Stock: per-SKU detail for the latest snapshot (same scope the visuals use)
   const map = {
     inv_expiry:   { module:'inventory_expiry_risk',  file:'inventory_expiry_risk.csv' },
-    inv_dead:     { module:'inventory_dead_stock',   file:'inventory_dead_stock.csv' },
   };
   const cfg = map[key]; if(!cfg) return;
   const f = getInvFilters();
