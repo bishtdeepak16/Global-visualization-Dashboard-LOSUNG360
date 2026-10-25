@@ -168,6 +168,24 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .metric-btn.active-shipments{border-color:var(--amber);background:rgba(255,178,56,.08);color:#8B6914;}
 .metric-btn.active-revenue{border-color:var(--green);background:rgba(29,154,108,.08);color:#0F6B47;}
 .metric-btn.active-qty{border-color:var(--blue);background:rgba(62,124,177,.08);color:#1E5A8B;}
+.tax-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:2px 0 8px;}
+.tax-bar select:disabled{opacity:.5;cursor:not-allowed;}
+.tax-chk{font:600 11px Inter,sans-serif;color:var(--ink-soft);display:flex;align-items:center;gap:5px;cursor:pointer;margin-left:auto;}
+.tax-crumb{font:600 11.5px Inter,sans-serif;color:var(--ink-soft);margin-bottom:6px;min-height:16px;}
+.tax-crumb a{color:var(--orange-deep);cursor:pointer;text-decoration:none;} .tax-crumb a:hover{text-decoration:underline;}
+.tax-body{display:flex;gap:22px;align-items:center;flex-wrap:wrap;}
+.tax-chart{position:relative;width:270px;height:270px;flex:0 0 270px;}
+.tax-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;text-align:center;}
+.tax-center b{font:800 20px Inter,sans-serif;color:var(--ink);} .tax-center span{font:600 10.5px Inter,sans-serif;color:var(--ink-soft);}
+.tax-legend{flex:1;min-width:260px;max-height:270px;overflow:auto;}
+.tax-row{display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:12px;}
+.tax-row:hover{background:rgba(255,106,50,.07);} .tax-row.dim{cursor:default;}
+.tax-dot{width:10px;height:10px;border-radius:50%;flex:0 0 10px;} .tax-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;}
+.tax-val{font-weight:800;} .tax-pct{width:46px;text-align:right;color:var(--ink-soft);font-weight:600;}
+.inv-rng{display:inline-flex;gap:2px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:2px;}
+.inv-rng button{border:none;background:transparent;padding:3px 10px;border-radius:999px;font:700 10.5px Inter,sans-serif;color:var(--ink-soft);cursor:pointer;transition:all .15s;}
+.inv-rng button:hover{color:var(--orange);}
+.inv-rng button.active{background:linear-gradient(135deg,var(--orange),var(--orange-deep));color:#fff;}
 .metric-btn.active-bad{border-color:var(--red);background:rgba(221,75,57,.08);color:#A8321F;}
 .multiselect-wrap{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-soft);font-weight:600;cursor:pointer;padding:4px 8px;border:1px solid var(--line);border-radius:7px;background:#fff;}
 .multiselect-wrap input[type=checkbox]{width:12px;height:12px;accent-color:var(--orange);cursor:pointer;}
@@ -992,7 +1010,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <!-- Stock Trend line -->
     <div class="panel">
       <div class="panel-head">
-        <div class="panel-head-left"><div class="panel-title">Stock Trend over Time</div><div class="panel-sub" id="inv-trend-sub">Daily snapshot — Total stock (Good + Blocked + QC Rejected / Bad)</div></div>
+        <div class="panel-head-left"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><div class="panel-title">Stock Trend over Time</div>
+          <div class="inv-rng" id="inv-range-pills"><button class="active" data-r="mtd">MTD</button><button data-r="quarterly">Quarterly</button><button data-r="monthly">Monthly</button></div></div>
+          <div class="panel-sub" id="inv-trend-sub">Daily snapshot (month to date) — Total stock (Good + Blocked + QC Rejected / Bad)</div></div>
         <button class="btn-viz-export" onclick="exportInvViz('inv_trend')">↓ Export Excel</button>
       </div>
       <div class="metric-toggles" id="inv-trend-pills" style="margin-bottom:8px;">
@@ -1028,11 +1048,22 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
   <div class="panel" style="margin-bottom:14px;">
     <div class="panel-head">
-      <div class="panel-head-left"><div class="panel-title">Category-wise Stock</div><div class="panel-sub">Good inventory by product category</div></div>
+      <div class="panel-head-left"><div class="panel-title">Category-wise Stock</div><div class="panel-sub" id="inv-tax-sub">Parent › Category › Sub-category</div></div>
       <button class="btn-viz-export" onclick="exportInvViz('inv_category')">↓ Export Excel</button>
     </div>
+    <div class="tax-bar">
+      <select class="viz-metric-sel" id="tax-l1" title="Parent category"><option value="">All Parent categories</option></select>
+      <select class="viz-metric-sel" id="tax-l2" title="Category" disabled><option value="">All Categories</option></select>
+      <select class="viz-metric-sel" id="tax-l3" title="Sub-category" disabled><option value="">All Sub-categories</option></select>
+      <div class="inv-rng" id="tax-metric"><button class="active" data-m="good">Good</button><button data-m="total">Total</button></div>
+      <label class="tax-chk"><input type="checkbox" id="tax-ns"> Include non-sellable (packaging, raw material)</label>
+    </div>
+    <div class="tax-crumb" id="tax-crumb"></div>
     <div id="load-inv-cat" class="loader-wrap"><div class="spin-ring"></div></div>
-    <div style="height:240px;"><canvas id="chartInvCategory"></canvas></div>
+    <div class="tax-body">
+      <div class="tax-chart"><canvas id="chartInvCategory"></canvas><div class="tax-center" id="tax-center"></div></div>
+      <div class="tax-legend" id="tax-legend"></div>
+    </div>
   </div>
 
   <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Risk Monitoring</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
@@ -2700,36 +2731,149 @@ function initInventoryCharts() {
                y:{ stacked:true, grid:{ display:false }, ticks:{ font:{ size:11 } } } } }
   });
   invCatChart = new Chart(document.getElementById('chartInvCategory'), {
-    type:'bar',
-    data:{ labels:[], datasets:[{ data:[], backgroundColor: c => PALETTE[c.dataIndex % PALETTE.length], borderRadius:5, barThickness:22 }] },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
-      scales:{ x:{ grid:{ display:false }, ticks:{ maxRotation:0, font:{ size:10.5 } } }, y:{ grid:{ color:LINE }, ticks:{ callback: v => v>=1e7?(v/1e7).toFixed(1)+'Cr':v>=1e5?(v/1e5).toFixed(1)+'L':v>=1000?Math.round(v/1000)+'k':v } } } }
+    type:'doughnut',
+    data:{ labels:[], datasets:[{ data:[], backgroundColor:[], borderWidth:2, borderColor:'#fff', hoverOffset:7 }] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'62%',
+      plugins:{ legend:{ display:false },
+        tooltip:{ callbacks:{
+          label:c=>{ const s=(window._taxSlices||[])[c.dataIndex]; return s ? s.name+': '+fmtCount(c.raw)+' ('+s.pct+'%)' : ''; },
+          afterLabel:c=>{ const s=(window._taxSlices||[])[c.dataIndex]; return s ? ['Good: '+fmtCount(s.good),'Blocked: '+fmtCount(s.blocked),'QC Rejected / Bad: '+fmtCount(s.bad),'Total: '+fmtCount(s.total),'SKUs: '+fmtCount(s.sku)] : []; } } } },
+      onClick:(e,els)=>{ if(els.length) taxDrill(els[0].index); } }
   });
 }
 
+
+// ══ Category-wise Stock: Parent › Category › Sub-category (taxonomy) ══
+const _tax = { rows:[], sel:['','',''], metric:'good', ns:false };
+window._taxSlices = [];
+const TAX_FIELD = { good:'Good', total:'Total' };
+function _taxScope() { return _tax.rows.filter(r => _tax.ns || r.sellable); }
+function _taxFiltered() {
+  const s=_tax.sel; return _taxScope().filter(r => (!s[0]||r.l1===s[0]) && (!s[1]||r.l2===s[1]) && (!s[2]||r.l3===s[2]));
+}
+function _taxGroup(rows, key) {
+  const m={}; rows.forEach(r=>{ const g=m[r[key]]||(m[r[key]]={name:r[key],good:0,blocked:0,bad:0,total:0,sku:0});
+    g.good+=r.good; g.blocked+=r.blocked; g.bad+=r.bad; g.total+=r.total; g.sku+=r.sku; });
+  return Object.values(m).sort((a,b)=>b[_tax.metric]-a[_tax.metric]);
+}
+function _taxFill(sel, firstLabel, names, cur) {
+  sel.innerHTML = '<option value="">'+firstLabel+'</option>' + names.map(n=>'<option value="'+n.replace(/"/g,'&quot;')+'">'+n+'</option>').join('');
+  sel.value = names.includes(cur) ? cur : '';
+}
+function taxRender() {
+  const sc=_taxScope(), s=_tax.sel, m=_tax.metric;
+  // cascading slicers (a level is only enabled once its parent is chosen)
+  const l1s=_taxGroup(sc,'l1').map(g=>g.name);
+  if (s[0] && !l1s.includes(s[0])) { s[0]=''; s[1]=''; s[2]=''; }
+  _taxFill(document.getElementById('tax-l1'),'All Parent categories',l1s,s[0]);
+  const l2s = s[0] ? _taxGroup(sc.filter(r=>r.l1===s[0]),'l2').map(g=>g.name) : [];
+  if (s[1] && !l2s.includes(s[1])) { s[1]=''; s[2]=''; }
+  _taxFill(document.getElementById('tax-l2'),'All Categories',l2s,s[1]); document.getElementById('tax-l2').disabled=!s[0];
+  const l3s = (s[0]&&s[1]) ? _taxGroup(sc.filter(r=>r.l1===s[0]&&r.l2===s[1]),'l3').map(g=>g.name) : [];
+  if (s[2] && !l3s.includes(s[2])) s[2]='';
+  _taxFill(document.getElementById('tax-l3'),'All Sub-categories',l3s,s[2]); document.getElementById('tax-l3').disabled=!(s[0]&&s[1]);
+
+  const rows=_taxFiltered(), level = s[1] ? 2 : (s[0] ? 1 : 0), key=['l1','l2','l3'][level];
+  const groups=_taxGroup(rows,key), grand=groups.reduce((a,g)=>a+g[m],0);
+  let slices=groups.slice(0,10);
+  if (groups.length>11) { const rest=groups.slice(10); slices=groups.slice(0,10); slices.push(rest.reduce((a,g)=>({name:'Others ('+rest.length+')',good:a.good+g.good,blocked:a.blocked+g.blocked,bad:a.bad+g.bad,total:a.total+g.total,sku:a.sku+g.sku,other:true}),{name:'',good:0,blocked:0,bad:0,total:0,sku:0})); }
+  else slices=groups;
+  slices.forEach(g=>{ g.pct = grand>0 ? (g[m]*100/grand).toFixed(1) : '0.0'; });
+  window._taxSlices=slices; window._taxLevel=level;
+  const colors=slices.map((g,i)=>g.other?'#C9CED6':PALETTE[i%PALETTE.length]);
+  invCatChart.data.labels=slices.map(g=>g.name); invCatChart.data.datasets[0].data=slices.map(g=>g[m]); invCatChart.data.datasets[0].backgroundColor=colors; invCatChart.update();
+  document.getElementById('tax-center').innerHTML = grand>0 ? '<b>'+fmtCount(grand)+'</b><span>'+TAX_FIELD[m]+' units</span>' : '<span>No stock for this selection</span>';
+  document.getElementById('tax-legend').innerHTML = slices.length ? slices.map((g,i)=>'<div class="tax-row'+((g.other||level===2)?' dim':'')+'" data-i="'+i+'" title="'+(level<2&&!g.other?'Click to drill down':'')+'"><span class="tax-dot" style="background:'+colors[i]+'"></span><span class="tax-name">'+g.name+'</span><span class="tax-val">'+fmtCount(g[m])+'</span><span class="tax-pct">'+g.pct+'%</span></div>').join('') : '<div style="padding:14px;color:var(--ink-soft);font-size:12px;">No data</div>';
+  const lv=['Parent categories','Categories','Sub-categories'][level];
+  const crumb=['<a data-c="0">All</a>']; if(s[0]) crumb.push('<a data-c="1">'+s[0]+'</a>'); if(s[1]) crumb.push('<a data-c="2">'+s[1]+'</a>'); if(s[2]) crumb.push('<b>'+s[2]+'</b>');
+  document.getElementById('tax-crumb').innerHTML = crumb.join(' › ');
+  document.getElementById('inv-tax-sub').textContent = TAX_FIELD[m]+' stock by '+lv.toLowerCase()+(_tax.ns?' (incl. non-sellable)':' (sellable only)')+(level<2?' — click a slice to drill down':'');
+}
+function taxDrill(i) {
+  const g=(window._taxSlices||[])[i], lv=window._taxLevel; if(!g||g.other||lv>1) return;
+  _tax.sel[lv]=g.name; if(lv===0) { _tax.sel[1]=''; _tax.sel[2]=''; } else _tax.sel[2]='';
+  taxRender();
+}
+function taxExportRows() {
+  const rows=_taxFiltered().slice().sort((a,b)=>b.total-a.total);
+  const out=rows.map(r=>({ 'Parent Category':r.l1, 'Category':r.l2, 'Sub-category':r.l3, 'Sellable':r.sellable?'Y':'N', 'SKUs':r.sku,
+    'Good Inventory':r.good, 'Blocked':r.blocked, 'QC Rejected / Bad':r.bad, 'Total':r.total }));
+  if (out.length) { const t=rows.reduce((a,r)=>({sku:a.sku+r.sku,good:a.good+r.good,blocked:a.blocked+r.blocked,bad:a.bad+r.bad,total:a.total+r.total}),{sku:0,good:0,blocked:0,bad:0,total:0});
+    out.push({ 'Parent Category':'TOTAL','Category':'','Sub-category':'','Sellable':_tax.ns?'Y+N':'Y','SKUs':t.sku,'Good Inventory':t.good,'Blocked':t.blocked,'QC Rejected / Bad':t.bad,'Total':t.total }); }
+  return out;
+}
+['tax-l1','tax-l2','tax-l3'].forEach((id,lv)=>document.getElementById(id).addEventListener('change',e=>{
+  _tax.sel[lv]=e.target.value; for(let k=lv+1;k<3;k++) _tax.sel[k]=''; taxRender(); }));
+document.querySelectorAll('#tax-metric button').forEach(b=>b.addEventListener('click',()=>{
+  _tax.metric=b.dataset.m; document.querySelectorAll('#tax-metric button').forEach(x=>x.classList.toggle('active',x===b)); taxRender(); }));
+document.getElementById('tax-ns').addEventListener('change',e=>{ _tax.ns=e.target.checked; taxRender(); });
+document.getElementById('tax-legend').addEventListener('click',e=>{ const r=e.target.closest('.tax-row'); if(r) taxDrill(+r.dataset.i); });
+document.getElementById('tax-crumb').addEventListener('click',e=>{ const a=e.target.closest('a'); if(!a) return;
+  const c=+a.dataset.c; for(let k=c;k<3;k++) _tax.sel[k]=''; taxRender(); });
+
 // ── Stock Trend: Total / Good / Blocked / QC Rejected-Bad pills (Total is the default) ──
 const INV_TREND_CFG = {
-  total:   { label:'Total Stock',       field:'total',   color:BLUE,  fill:'rgba(62,124,177,.10)', sub:'Daily snapshot — Total stock (Good + Blocked + QC Rejected / Bad)', cls:'active-qty' },
-  good:    { label:'Good Inventory',    field:'good',    color:GREEN, fill:'rgba(29,154,108,.10)', sub:'Daily snapshot — Good inventory (GOOD_INVENTORY)',                  cls:'active-revenue' },
-  blocked: { label:'Blocked',           field:'blocked', color:AMBER, fill:'rgba(255,178,56,.13)', sub:'Daily snapshot — Blocked quantity',                                 cls:'active-shipments' },
-  bad:     { label:'QC Rejected / Bad', field:'bad',     color:RED,   fill:'rgba(221,75,57,.10)',  sub:'Daily snapshot — QC Rejected / Bad inventory',                       cls:'active-bad' }
+  total:   { label:'Total Stock',       field:'total',   color:BLUE,  fill:'rgba(62,124,177,.10)', what:'Total stock (Good + Blocked + QC Rejected / Bad)', cls:'active-qty' },
+  good:    { label:'Good Inventory',    field:'good',    color:GREEN, fill:'rgba(29,154,108,.10)', what:'Good inventory (GOOD_INVENTORY)',                  cls:'active-revenue' },
+  blocked: { label:'Blocked',           field:'blocked', color:AMBER, fill:'rgba(255,178,56,.13)', what:'Blocked quantity',                                 cls:'active-shipments' },
+  bad:     { label:'QC Rejected / Bad', field:'bad',     color:RED,   fill:'rgba(221,75,57,.10)',  what:'QC Rejected / Bad inventory',                      cls:'active-bad' }
 };
+// Range pills: MTD (default, daily snapshots of this month) · Monthly / Quarterly (since the first inventory snapshot).
+// Stock is a level, not a flow, so a month / quarter shows its CLOSING stock = the last snapshot inside it
+// (the running month / quarter shows the latest snapshot so far).
+const INV_RANGE_SUB = { mtd:'Daily snapshot (month to date)', monthly:'Month-end snapshot, since inventory tracking began', quarterly:'Quarter-end snapshot, since inventory tracking began' };
 window._invTrendKey = 'total';
+window._invRange = 'mtd';
+
+function _invBucket(rows, mode) {           // rows: daily [{date,total,good,blocked,bad}] → last snapshot per month / quarter
+  const out = new Map();
+  rows.slice().sort((a,b)=>a.date<b.date?-1:1).forEach(r=>{
+    const y = r.date.slice(0,4), m = parseInt(r.date.slice(5,7),10);
+    const key = mode==='monthly' ? r.date.slice(0,7) : y+'-Q'+(Math.floor((m-1)/3)+1);
+    const lbl = mode==='monthly' ? _MONTHS_SHORT[m-1]+"'"+y.slice(2) : 'Q'+(Math.floor((m-1)/3)+1)+"'"+y.slice(2);
+    out.set(key, { ...r, period:lbl, label:lbl });   // later snapshots overwrite earlier → closing value
+  });
+  return [...out.values()];
+}
+
+async function _invLoadAllTrend(V) {         // all-time daily rows, fetched once per filter set (first click on Monthly / Quarterly)
+  if (V.trendAll) return V.trendAll;
+  showLoader('load-inv-trend');
+  const p = { client:V.params.client, city:V.params.city };   // same client / FC slicers, no date window
+  const rows = await fetchData('inventory_trend', p, true);
+  V.trendAll = (rows||[]).map(r=>({ date:r.snapshot_date, good:parseFloat(r.good_qty)||0, blocked:parseFloat(r.blocked_qty)||0,
+                                     bad:parseFloat(r.bad_qty)||0, total:parseFloat(r.total_qty)||0 }));
+  hideLoader('load-inv-trend');
+  return V.trendAll;
+}
+
 function renderInvTrend() {
+  const V = window._invViz; if (!V) return;
   const cfg = INV_TREND_CFG[window._invTrendKey] || INV_TREND_CFG.total;
-  const rows = (window._invViz && window._invViz.trend) || [];
+  const mode = window._invRange;
+  if (mode !== 'mtd' && !V.trendAll) {
+    _invLoadAllTrend(V).then(()=>{ if (V === window._invViz) renderInvTrend(); });
+    return;
+  }
+  const shown = mode==='mtd' ? V.trend.map(r=>({ ...r, label:r.date }))
+                             : _invBucket(V.trendAll, mode);
+  V.trendShown = { mode, rows:shown };       // what the chart is drawing right now — the Excel export reads this
   const ds = invTrendChart.data.datasets[0];
-  invTrendChart.data.labels = rows.map(r=>r.date);
-  ds.data = rows.map(r=>r[cfg.field]);
+  invTrendChart.data.labels = shown.map(r=>r.label);
+  ds.data = shown.map(r=>r[cfg.field]);
   ds.label = cfg.label; ds.borderColor = cfg.color; ds.backgroundColor = cfg.fill; ds.pointBackgroundColor = cfg.color;
   invTrendChart.update();
-  const sub = document.getElementById('inv-trend-sub'); if (sub) sub.textContent = cfg.sub;
+  const sub = document.getElementById('inv-trend-sub'); if (sub) sub.textContent = INV_RANGE_SUB[mode] + ' — ' + cfg.what;
   document.querySelectorAll('#inv-trend-pills .metric-btn').forEach(b=>{
     b.className = 'metric-btn' + (b.dataset.k===window._invTrendKey ? ' '+INV_TREND_CFG[b.dataset.k].cls : '');
   });
+  document.querySelectorAll('#inv-range-pills button').forEach(b=>b.classList.toggle('active', b.dataset.r===mode));
 }
 document.querySelectorAll('#inv-trend-pills .metric-btn').forEach(b=>{
   b.addEventListener('click', ()=>{ window._invTrendKey = b.dataset.k; renderInvTrend(); });
+});
+document.querySelectorAll('#inv-range-pills button').forEach(b=>{
+  b.addEventListener('click', ()=>{ window._invRange = b.dataset.r; renderInvTrend(); });
 });
 
 function getInvFilters() {
@@ -2766,7 +2910,7 @@ async function loadInventory() {
     fetchData('inventory_trend', trendParams, true),
     fetchData('inventory_by_client', params, true),
     fetchData('inventory_by_facility', params, true),
-    fetchData('inventory_by_category', params, true),
+    fetchData('inventory_taxonomy', params, true),
     fetchData('inventory_expiry_risk', todayInvParams, true),
     fetchData('inventory_dead_stock', todayInvParams, true),
   ]);
@@ -2825,10 +2969,11 @@ async function loadInventory() {
   invFacilityChart.update();
   hideLoader('load-inv-facility');
 
-  V.byCat = (byCat||[]).map(r=>({ name:r.category_name||r.category||'Uncategorised', ..._bk(r) }));
-  invCatChart.data.labels = V.byCat.map(r=>shortenLabel(r.name,18));
-  invCatChart.data.datasets[0].data = V.byCat.map(r=>r.good);
-  invCatChart.update();
+  // Category-wise Stock: taxonomy rows (L1/L2/L3 x sellable). Slicers / drill-down / export run client-side from these rows.
+  _tax.rows = (byCat||[]).map(r=>({ l1:r.l1||'Unclassified', l2:r.l2||'(no category)', l3:r.l3||'(no sub-category)',
+    sellable:String(r.is_sellable)!=='false', sku:_n(r.sku_count), ..._bk(r) }));
+  V.byCat = _tax.rows;
+  taxRender();
   hideLoader('load-inv-cat');
 
   // Aggregate expiry/dead items by client + facility (not per-SKU)
@@ -2877,8 +3022,14 @@ async function exportInvViz(key) {
   if (['inv_type','inv_trend','inv_client','inv_facility','inv_category'].includes(key)) {
     if (!V) { alert('Inventory data is still loading — please try again in a moment.'); return; }
     if (key === 'inv_trend') {
-      const rows = V.trend.map(r=>({ 'Snapshot Date':r.date, 'Total':r.total, 'Good Inventory':r.good, 'Blocked':r.blocked, 'QC Rejected / Bad':r.bad }));
-      downloadCsv(jsonToCsv(rows), 'inventory_trend_'+V.trendFrom+'_to_'+V.trendTo+'.csv'); return;
+      const T = V.trendShown; if (!T) { alert('Inventory data is still loading — please try again in a moment.'); return; }
+      // exactly what the chart is showing: MTD = daily rows; Monthly / Quarterly = period-end (closing) rows
+      const rows = T.rows.map(r=>{
+        const o = T.mode==='mtd' ? {} : { 'Period':r.period };
+        return { ...o, 'Snapshot Date':r.date, 'Total':r.total, 'Good Inventory':r.good, 'Blocked':r.blocked, 'QC Rejected / Bad':r.bad };
+      });
+      const nm = T.mode==='mtd' ? 'inventory_trend_'+V.trendFrom+'_to_'+V.trendTo+'.csv' : 'inventory_trend_'+T.mode+'.csv';
+      downloadCsv(jsonToCsv(rows), nm); return;
     }
     if (key === 'inv_type') {
       const k = V.kpi; if (!k) { alert('Inventory data is still loading — please try again in a moment.'); return; }
@@ -2895,9 +3046,10 @@ async function exportInvViz(key) {
       rows.push({ Bucket:'Stock Health', Source:'Good ÷ Total', Quantity:'', '% of Total':pc(k.good) });
       downloadCsv(jsonToCsv(rows), 'inventory_type_split.csv'); return;
     }
+    if (key === 'inv_category') { const rows = taxExportRows(); if(!rows.length){ alert('No category data for the current selection.'); return; } downloadCsv(jsonToCsv(rows),'inventory_by_category.csv'); return; }
     const cfg = { inv_client:{ list:V.byClient, lead:'Client', file:'inventory_by_client.csv' },
                   inv_facility:{ list:V.byFacility, lead:'Facility', file:'inventory_by_facility.csv' },
-                  inv_category:{ list:V.byCat, lead:'Category', file:'inventory_by_category.csv' } }[key];
+                  }[key];
     const rows = cfg.list.map(r=>({ [cfg.lead]:r.name, 'Good Inventory':r.good, 'Blocked':r.blocked, 'QC Rejected / Bad':r.bad, 'Total':r.total }));
     downloadCsv(jsonToCsv(rows), cfg.file); return;
   }
