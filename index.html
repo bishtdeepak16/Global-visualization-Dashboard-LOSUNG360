@@ -183,7 +183,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .q-tip{position:fixed;z-index:9999;pointer-events:none;background:#1f1a17;color:#fff;border-radius:10px;padding:10px 12px;font:600 11.5px Inter,sans-serif;line-height:1.55;box-shadow:0 8px 24px rgba(0,0,0,.3);display:none;max-width:300px;}
 .q-empty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;font:700 13px Inter,sans-serif;color:var(--ink-soft);padding:30px;} .q-bar-t{font:700 11px Inter,sans-serif;color:var(--ink-soft);margin-bottom:4px;}
 .q-bar{display:flex;height:44px;border-radius:10px;overflow:hidden;background:#eee;} .q-seg{display:flex;flex-direction:column;justify-content:center;padding:0 8px;color:#fff;font:800 12px Inter,sans-serif;overflow:hidden;white-space:nowrap;min-width:0;} .q-seg small{font:600 10px Inter,sans-serif;opacity:.92;}
-.q-tt{font:800 13px Inter,sans-serif;margin:14px 0 2px;color:var(--ink);}
+.q-tt{display:inline;font:800 13px Inter,sans-serif;color:var(--ink);} #q-ttw{margin-top:22px;margin-bottom:2px;}
+.q-trow{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;}
+.q-card{cursor:default;padding-right:112px;} .q-dl{position:absolute;top:8px;right:8px;width:auto;height:auto;padding:5px 9px;font:700 10.5px Inter,sans-serif;border-radius:8px;border:1px solid var(--green);color:var(--green);background:#fff;white-space:nowrap;} .q-dl:hover{background:var(--green);color:#fff;border-color:var(--green);}
 .q-card:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.07);} .q-card.on{background:rgba(255,106,50,.06);box-shadow:0 0 0 2px var(--orange) inset;}
 .q-card h4{margin:0;font:800 12px Inter,sans-serif;color:var(--ink);} .q-card .qs{font:600 10.5px Inter,sans-serif;color:var(--ink-soft);margin:1px 0 6px;}
 .q-card .qn{font:800 20px Sora,sans-serif;color:var(--ink);} .q-card .qm{font:600 10.5px Inter,sans-serif;color:var(--ink-soft);}
@@ -1034,7 +1036,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <div class="panel-head">
         <div class="panel-head-left"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><div class="panel-title">Stock Trend over Time</div>
           <div class="inv-rng" id="inv-range-pills"><button class="active" data-r="mtd">MTD</button><button data-r="quarterly">Quarterly</button><button data-r="monthly">Monthly</button></div></div>
-          <div class="panel-sub" id="inv-trend-sub">Daily snapshot (month to date) — Total stock (Good + Blocked + QC Rejected / Bad)</div></div>
+          <div class="panel-sub" id="inv-trend-sub" style="display:none">Daily snapshot (month to date) — Total stock (Good + Blocked + QC Rejected / Bad)</div></div>
         <button class="btn-viz-export" onclick="exportInvViz('inv_trend')">↓ Export Excel</button>
       </div>
       <div class="metric-toggles" id="inv-trend-pills" style="margin-bottom:8px;">
@@ -1088,6 +1090,25 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     </div>
   </div>
 
+  <div class="panel" style="margin-bottom:14px;">
+    <div class="panel-head">
+      <div class="panel-head-left"><div class="panel-title">Sales vs Inventory Matrix</div><div class="panel-sub" id="q-sub">Where is your stock sitting, relative to how fast it sells</div></div>
+      <div class="panel-head-right">
+        <div class="inv-rng" id="q-view"><button data-v="sku" class="active">SKUs</button><button data-v="portion">Portion</button></div>
+        <div class="inv-rng" id="q-days"><button data-d="30" class="active">30d</button><button data-d="60">60d</button></div>
+      </div>
+    </div>
+    <div id="load-inv-quad" class="loader-wrap"><div class="spin-ring"></div></div>
+    <div class="q-cards" id="q-cards"></div>
+    <div class="q-warn" id="q-warn"></div>
+    <div id="q-portion" style="display:none"><div style="position:relative"><div class="q-axy">Sales ↑ higher</div><div class="q-grid" id="q-grid"></div></div><div class="q-axx">Good stock → higher &nbsp;·&nbsp; bubble size = share of total good stock</div></div>
+    <div id="q-skuview"><div class="q-wrap"><canvas id="chartQuad"></canvas><div class="q-empty" id="q-empty"></div></div></div>
+    <div class="q-tip" id="q-tip"></div>
+    <div class="panel-sub" id="q-note" style="margin-top:8px;"></div>
+    <div class="q-trow"><div><div class="q-tt" id="q-ttw"><span id="q-tt"></span></div><div class="panel-sub" id="q-tts"></div></div>
+      <div class="inv-rng" id="q-pills"><button data-k="star" class="active">Workhorse</button><button data-k="risk">Rising Star</button><button data-k="slow">Niche</button><button data-k="over">Review</button></div></div>
+    <div class="q-tbl"><table><thead><tr><th>SKU</th><th>Name</th><th>Client</th><th style="text-align:right">Good stock</th><th style="text-align:right" id="q-th-s">Sales</th><th style="text-align:right">Cover (days)</th></tr></thead><tbody id="q-body"></tbody></table></div>
+  </div>
   <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Risk Monitoring</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
   <div class="grid" style="margin-bottom:14px;grid-template-columns:1fr;">
     <!-- Expiry at Risk -->
@@ -1102,24 +1123,6 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <div class="expiry-slab watch"><div class="slab-badge">🟡 60–90 Days</div><div id="inv-exp-90">Loading…</div></div>
       </div>
     </div>
-  </div>
-  <div class="panel" style="margin-bottom:14px;">
-    <div class="panel-head">
-      <div class="panel-head-left"><div class="panel-title">Sales vs Inventory Matrix</div><div class="panel-sub" id="q-sub">Where is your stock sitting, relative to how fast it sells</div></div>
-      <div class="panel-head-right">
-        <div class="inv-rng" id="q-view"><button data-v="portion" class="active">Portion</button><button data-v="sku">SKUs</button></div>
-        <div class="inv-rng" id="q-days"><button data-d="30" class="active">30d</button><button data-d="60">60d</button></div>
-      </div>
-    </div>
-    <div id="load-inv-quad" class="loader-wrap"><div class="spin-ring"></div></div>
-    <div class="q-cards" id="q-cards"></div>
-    <div class="q-warn" id="q-warn"></div>
-    <div id="q-portion"><div style="position:relative"><div class="q-axy">Sales ↑ higher</div><div class="q-grid" id="q-grid"></div></div><div class="q-axx">Good stock → higher &nbsp;·&nbsp; bubble size = share of total good stock</div></div>
-    <div id="q-skuview" style="display:none"><div class="q-wrap"><canvas id="chartQuad"></canvas><div class="q-empty" id="q-empty"></div></div></div>
-    <div class="q-tip" id="q-tip"></div>
-    <div class="panel-sub" id="q-note" style="margin-top:8px;"></div>
-    <div class="q-tt" id="q-tt"></div><div class="panel-sub" id="q-tts"></div>
-    <div class="q-tbl"><table><thead><tr><th>SKU</th><th>Name</th><th>Client</th><th style="text-align:right">Good stock</th><th style="text-align:right" id="q-th-s">Sales</th><th style="text-align:right">Cover (days)</th></tr></thead><tbody id="q-body"></tbody></table></div>
   </div>
   </div>
 </div>
@@ -2346,7 +2349,9 @@ const PANEL_INFO = {
   'Expiry-at-Risk Stock':
     'Items expiring within 90 days of today, bucketed into 3 slabs — <30 days is most urgent. Based on batch expiry dates recorded at GRN.',
   'Sales vs Inventory Matrix':
-    'Shows where your good stock sits compared with how fast it sells. Every sellable SKU with stock is placed in one of 4 boxes using two median lines: stock (right = more) and sales (up = more), sales counted over the last 30 or 60 days (toggle). WORKHORSE = high sales + high stock: core movers, keep available. RISING STAR = high sales + low stock: selling fast on thin stock, replenish first. NICHE = low sales + low stock: small balanced lines, keep lean. REVIEW = low sales + high stock: cash locked in slow or unsold stock, liquidate, bundle or stop buying. PORTION (default) draws the same 4 boxes with one bubble each: bubble size = the share of total good stock held by that box; hover a bubble for units, SKUs, sales, share of sales and cover days. SKUs shows the scatter: one dot per SKU, only SKUs that sold in the last 60 days (others would clutter it, but they are still counted in Portion and in downloads). Click a box to list its top 50 SKUs below; the download icon on a box exports every SKU in it with stock, 30d and 60d sales, daily average and cover days. Packaging and raw material are excluded; client and city filters apply.',
+    'Each dot is a SKU that sold in the last 60 days, placed by stock (right = more) and sales (up = more). Dashed lines are the medians. Dot size = stock + sales units. Workhorse: high sales, high stock. Rising Star: high sales, low stock. Niche: low on both. Review: low sales, high stock. Portion view shows each box\'s share of stock.',
+  'Stock Trend over Time':
+    'Total stock (Good + Blocked + QC Rejected / Bad) over time. MTD = daily snapshots this month; Monthly / Quarterly = closing stock of each period. Use the pills to see one stock type.',
   // ── Putaway ───────────────────────────────────────────────────────
   'Putaway Type Split':
     'Breakdown of putaway operations by origin type — GRN (fresh inbound), Returns (customer returns), Shelf Transfer (internal moves) etc.',
@@ -2447,6 +2452,7 @@ function _attachInfoBtn(el, info, asImage) {
 
 // Inject ⓘ button into every panel title that has an entry in PANEL_INFO
 document.querySelectorAll('.panel-title').forEach(el => _attachInfoBtn(el, PANEL_INFO[el.textContent.trim()]));
+_attachInfoBtn(document.getElementById('q-ttw'), 'Top 50 SKUs of the box selected with the pills on the right, sorted by sales for Workhorse / Rising Star and by stock for Niche / Review. Use Export Excel on a box above for the full list.', true);
 
 // ── KPI box info (Projection view) — plain-language meaning + how it is calculated ──
 const KPI_INFO = {
@@ -2844,7 +2850,7 @@ document.getElementById('tax-crumb').addEventListener('click',e=>{ const a=e.tar
 
 
 // ══ Sales vs Inventory matrix ══
-const _quad = { days:30, view:'portion', rows:[], medI:0, medS:0, sel:'over', chart:null };
+const _quad = { days:30, view:'sku', rows:[], medI:0, medS:0, sel:'star', chart:null };
 const Q_DEF = {
   star:{ t:'Workhorse', s:'High sales · High stock', a:'Core movers — keep well stocked, protect availability', c:'#1D9A6C' },
   risk:{ t:'Rising Star', s:'High sales · Low stock', a:'Selling fast on thin stock — replenish first', c:'#FFB238' },
@@ -2877,7 +2883,7 @@ function _qAgg() {
 }
 function quadRender() {
   const {A,T}=_qAgg(), pc=(v,t)=>t?(v*100/t):0, pf=v=>v.toFixed(1)+'%';
-  document.getElementById('q-cards').innerHTML=Q_KEYS.map(k=>'<div class="q-card'+(_quad.sel===k?' on':'')+'" data-k="'+k+'" style="border-left-color:'+Q_DEF[k].c+'"><button class="q-dl" data-dl="'+k+'" title="Download these SKUs (Excel)">⬇</button><h4>'+Q_DEF[k].t+'</h4><div class="qs">'+Q_DEF[k].s+'</div><div class="qn">'+pf(pc(A[k].u,T.u))+' <span class="qm">of stock</span></div><div class="qm">'+fmtCount(A[k].u)+' units · '+fmtCount(A[k].n)+' SKUs</div><div class="qm" style="margin-top:5px;font-style:italic">'+Q_DEF[k].a+'</div></div>').join('');
+  document.getElementById('q-cards').innerHTML=Q_KEYS.map(k=>'<div class="q-card" data-k="'+k+'" style="border-left-color:'+Q_DEF[k].c+'"><button class="q-dl" data-dl="'+k+'" title="Download these SKUs (Excel)">↓ Export Excel</button><h4>'+Q_DEF[k].t+'</h4><div class="qs">'+Q_DEF[k].s+'</div><div class="qn">'+pf(pc(A[k].u,T.u))+' <span class="qm">of stock</span></div><div class="qm">'+fmtCount(A[k].u)+' units · '+fmtCount(A[k].n)+' SKUs</div><div class="qm" style="margin-top:5px;font-style:italic">'+Q_DEF[k].a+'</div></div>').join('');
   document.getElementById('q-sub').textContent = _quad.view==='portion'
     ? 'Bubble size = share of good stock in each box · sales = last '+_quad.days+' days'
     : 'Each dot = one SKU sold in the last 60 days · sales = last '+_quad.days+' days';
@@ -2895,21 +2901,22 @@ function quadRender() {
   document.getElementById('q-portion').style.display = _quad.view==='portion'?'block':'none';
   document.getElementById('q-skuview').style.display = _quad.view==='sku'?'block':'none';
   const r=_quad.rows, plotted=r.filter(x=>x.active);
-  document.getElementById('q-note').textContent = 'Dashed lines = medians: stock '+fmtCount(Math.round(_quad.medI))+' units (SKUs sold in last 60d), sales '+fmtCount(Math.round(_quad.medS))+' units (SKUs that sold in last '+_quad.days+'d). '+fmtCount(r.length-plotted.length)+' stocked SKUs with no sale in 60 days are not plotted but are counted in Portion and the downloads (they fall in Review / Niche).';
+  document.getElementById('q-note').textContent = 'Dot size = stock + sales units (bigger = more volume). Dashed lines = medians: stock '+fmtCount(Math.round(_quad.medI))+' units (SKUs sold in last 60d), sales '+fmtCount(Math.round(_quad.medS))+' units (SKUs that sold in last '+_quad.days+'d). '+fmtCount(r.length-plotted.length)+' stocked SKUs with no sale in 60 days are not plotted but are counted in Portion and the downloads (they fall in Review / Niche).';
   if (_quad.view==='sku') quadChart(plotted);
   // table
   const sel=_quad.sel, byS=(sel==='risk'||sel==='star');
   const list=r.filter(x=>x.q===sel).sort((a,b)=>byS?b.sales-a.sales:b.inv-a.inv).slice(0,50);
+  document.querySelectorAll('#q-pills button').forEach(b=>b.classList.toggle('active',b.dataset.k===_quad.sel));
   document.getElementById('q-tt').textContent=Q_DEF[sel].t+' — top '+list.length+' SKUs';
-  document.getElementById('q-tts').textContent=Q_DEF[sel].s+' · sorted by '+(byS?'sales (highest first)':'stock (highest first)')+' · click another box above to change · ⬇ on the box downloads all its SKUs';
+  document.getElementById('q-tts').textContent=Q_DEF[sel].s+' · sorted by '+(byS?'sales (highest first)':'stock (highest first)')+' · switch box with the pills on the right';
   document.getElementById('q-th-s').textContent='Sales ('+_quad.days+'d)';
   document.getElementById('q-body').innerHTML=list.length?list.map(x=>'<tr><td>'+x.sku+'</td><td>'+x.name.slice(0,70)+'</td><td>'+x.client+'</td><td class="n">'+fmtCount(x.inv)+'</td><td class="n">'+fmtCount(x.sales)+'</td><td class="n">'+(x.cover==null?'—':fmtCount(x.cover))+'</td></tr>').join(''):'<tr><td colspan="6" style="text-align:center;padding:18px;color:var(--ink-soft)">No SKUs in this box</td></tr>';
 }
 function quadChart(pl) {
   const em=document.getElementById('q-empty'); em.style.display=pl.length?'none':'flex';
   if(!pl.length){ em.textContent='No SKU has sold in the last 60 days for this selection, so there is nothing to plot. Check the Portion view or the downloads.'; if(_quad.chart){ _quad.chart.data.datasets.forEach(d=>d.data=[]); _quad.chart.update(); } return; }
-  const FL=0.5, yv=x=>x.sales>0?x.sales:FL;
-  const data={ datasets:Q_KEYS.map(k=>({label:Q_DEF[k].t,data:pl.filter(x=>x.q===k).map(x=>({x:x.inv,y:yv(x),d:x})),backgroundColor:Q_DEF[k].c+'B3',borderColor:Q_DEF[k].c,pointRadius:4,pointHoverRadius:7})) };
+  const FL=0.5, yv=x=>x.sales>0?x.sales:FL, mx=Math.max(...pl.map(x=>x.inv+x.sales),1);
+  const data={ datasets:Q_KEYS.map(k=>({label:Q_DEF[k].t,data:pl.filter(x=>x.q===k).map(x=>({x:x.inv,y:yv(x),d:x,r:4.5+10*Math.sqrt((x.inv+x.sales)/mx)})),backgroundColor:Q_DEF[k].c+'A6',borderColor:Q_DEF[k].c,borderWidth:1.5,pointRadius:c=>(c.raw&&c.raw.r)||6,pointHoverRadius:c=>((c.raw&&c.raw.r)||6)+3})) };
   // symmetric log ranges around the medians → the dashed cross always sits in the middle of the chart
   const xs=pl.map(x=>x.inv), ys=pl.map(yv), mI=_quad.medI||1, mS=_quad.medS||1;
   const kx=Math.max(2, Math.max(...xs,mI)/mI, mI/Math.min(...xs,mI))*1.25, ky=Math.max(2, Math.max(...ys,mS)/mS, mS/Math.min(...ys,mS))*1.25;
@@ -2941,7 +2948,8 @@ function quadExportRows(key) {
 }
 document.getElementById('q-cards').addEventListener('click',e=>{
   const dl=e.target.closest('.q-dl'); if(dl){ e.stopPropagation(); const r=quadExportRows(dl.dataset.dl); if(!r.length){alert('No SKUs in this box.');return;} downloadCsv(jsonToCsv(r),'sales_vs_inventory_'+Q_DEF[dl.dataset.dl].t.toLowerCase().replace(/ /g,'_')+'.csv'); return; }
-  const c=e.target.closest('.q-card'); if(c){ _quad.sel=c.dataset.k; quadRender(); } });
+});
+document.getElementById('q-pills').addEventListener('click',e=>{ const b=e.target.closest('button'); if(b){ _quad.sel=b.dataset.k; quadRender(); } });
 (function(){ const tip=document.getElementById('q-tip'), grid=document.getElementById('q-grid');
   grid.addEventListener('mousemove',e=>{ const b=e.target.closest('.q-bub'); if(!b){ tip.style.display='none'; return; }
     const k=b.dataset.k, {A,T}=window._qAggCache, a=A[k], d=_quad.days, pf=(v,t)=>(t?v*100/t:0).toFixed(1)+'%';
