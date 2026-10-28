@@ -227,11 +227,13 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .info-btn.info-img:hover{transform:scale(1.18);}
 /* Projection KPI row: smaller emoji tile, title + info icon on one line, identical alignment in every box */
 #sale_orders-viz .kpi-top,#sale_orders-seller .kpi-top,#sale_orders-analytics .kpi-top{align-items:center;margin-bottom:12px;min-height:34px;gap:8px;}
-#sale_orders-viz .kpi-label,#sale_orders-seller .kpi-label,#sale_orders-analytics .kpi-label{display:flex;align-items:center;white-space:nowrap;flex:1 1 auto;min-width:0;position:relative;top:-6px;}
+#sale_orders-viz .kpi-label,#sale_orders-seller .kpi-label,#sale_orders-analytics .kpi-label{display:flex;align-items:center;flex-wrap:nowrap;white-space:nowrap;flex:1 1 0;min-width:0;font-size:10.5px;position:relative;top:0;}
 .filter-bar.proj-mode .date-label,.filter-bar.proj-mode input[type=date],.filter-bar.proj-mode #btn-apply-so,.filter-bar.proj-mode .filter-divider:nth-of-type(4){display:none !important;}
 #sale_orders-analytics .proj-metric-sel{font:600 11px Inter,sans-serif;padding:4px 8px;border-radius:20px;border:1px solid var(--orange);color:var(--orange);background:#fff;cursor:pointer;margin-left:8px;}
 #sale_orders-viz .kpi-card:hover,#sale_orders-seller .kpi-card:hover,#sale_orders-analytics .kpi-card:hover{transform:none;}
-#sale_orders-viz .kpi-icon,#sale_orders-seller .kpi-icon,#sale_orders-analytics .kpi-icon{width:34px;height:34px;font-size:17px;border-radius:10px;flex-shrink:0;}
+#sale_orders-viz .kpi-icon,#sale_orders-seller .kpi-icon,#sale_orders-analytics .kpi-icon{width:30px;height:30px;font-size:15px;border-radius:9px;flex-shrink:0;margin-left:6px;}
+#sale_orders-viz .kpi-label .info-btn,#sale_orders-seller .kpi-label .info-btn,#sale_orders-analytics .kpi-label .info-btn{width:14px;height:14px;min-width:14px;margin:0 0 0 5px;flex-shrink:0;vertical-align:middle;}
+#sale_orders-viz .kpi-top,#sale_orders-seller .kpi-top,#sale_orders-analytics .kpi-top{min-height:30px;}
 
 /* LEGEND */
 .legend-list{display:flex;flex-direction:column;gap:10px;margin-top:8px;}
