@@ -4855,7 +4855,7 @@ function svRenderChannelTable(){
   const tfoot=document.getElementById('sv-channel-tfoot');
   const isCour=_svChanMode==='courier', DATA=isCour?_svCourierData:_svChannelData;
   document.getElementById('sv-chan-th').textContent=(isCour?'Shipping Courier':'Channel')+' ↕';
-  document.getElementById('sv-chan-sub').textContent='Top 10 '+(isCour?'shipping couriers · orders, delivery & return rate':'channels · per-channel performance')+' · click header to sort';
+  document.getElementById('sv-chan-sub').textContent='Top 10 '+(isCour?'shipping couriers · shipped orders only (courier assigned)':'channels · per-channel performance')+' · click header to sort';
   document.getElementById('sv-channel-table').classList.toggle('sv-courier-mode',isCour);
   if(isCour&&(_svChannelSortKey==='aov'||_svChannelSortKey==='disc_pct')) _svChannelSortKey='orders';
   document.querySelectorAll('#sv-chan-pills button').forEach(b=>b.classList.toggle('active',b.dataset.m===_svChanMode));
