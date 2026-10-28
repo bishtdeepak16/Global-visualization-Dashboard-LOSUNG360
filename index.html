@@ -234,6 +234,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 #sale_orders-viz .kpi-icon,#sale_orders-seller .kpi-icon,#sale_orders-analytics .kpi-icon{width:30px;height:30px;font-size:15px;border-radius:9px;flex-shrink:0;margin-left:6px;}
 #sale_orders-viz .kpi-label .info-btn,#sale_orders-seller .kpi-label .info-btn,#sale_orders-analytics .kpi-label .info-btn{width:14px;height:14px;min-width:14px;margin:0 0 0 5px;flex-shrink:0;vertical-align:middle;}
 #sale_orders-viz .kpi-top,#sale_orders-seller .kpi-top,#sale_orders-analytics .kpi-top{min-height:30px;}
+#sale_orders-viz .kpi-value,#sale_orders-seller .kpi-value,#sale_orders-analytics .kpi-value{height:30px;line-height:30px;margin-bottom:4px;white-space:nowrap;}
+#sale_orders-viz .kpi-delta,#sale_orders-seller .kpi-delta,#sale_orders-analytics .kpi-delta{height:20px;line-height:20px;align-items:center;}
+#sale_orders-viz .kpi-card,#sale_orders-seller .kpi-card,#sale_orders-analytics .kpi-card{min-height:112px;}
 
 /* LEGEND */
 .legend-list{display:flex;flex-direction:column;gap:10px;margin-top:8px;}
@@ -299,6 +302,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 /* ── Seller channel table ─────────────────────────────────── */
 .sv-channel-table{width:100%;border-collapse:collapse;font-size:12px;}
+.sv-channel-table.sv-courier-mode .sv-aovcol{display:none;}
 .sv-channel-table thead tr{background:rgba(234,228,219,.45);}
 .sv-channel-table td:not(:first-child),.sv-channel-table th:not(:first-child){text-align:center;}
 .sv-channel-table th{padding:8px 10px;font-weight:700;font-size:10.5px;color:var(--ink-soft);
@@ -734,8 +738,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
           <thead><tr>
             <th id="sv-chan-th" onclick="svSortChannel('channel')" style="text-align:left;min-width:160px;">Channel ↕</th>
             <th onclick="svSortChannel('orders')" style="text-align:center;">Orders ↕</th>
-            <th onclick="svSortChannel('aov')" style="text-align:center;">Avg Order Value ↕</th>
-            <th onclick="svSortChannel('disc_pct')" style="text-align:center;">Discount % ↕</th>
+            <th class="sv-aovcol" onclick="svSortChannel('aov')" style="text-align:center;">Avg Order Value ↕</th>
+            <th class="sv-aovcol" onclick="svSortChannel('disc_pct')" style="text-align:center;">Discount % ↕</th>
             <th onclick="svSortChannel('del_rate')" style="text-align:center;">Delivery Rate % ↕</th>
             <th onclick="svSortChannel('ret_rate')" style="text-align:center;">Return Rate % ↕</th>
           </tr></thead>
@@ -4851,7 +4855,9 @@ function svRenderChannelTable(){
   const tfoot=document.getElementById('sv-channel-tfoot');
   const isCour=_svChanMode==='courier', DATA=isCour?_svCourierData:_svChannelData;
   document.getElementById('sv-chan-th').textContent=(isCour?'Shipping Courier':'Channel')+' ↕';
-  document.getElementById('sv-chan-sub').textContent='Top 10 '+(isCour?'shipping couriers · per-courier':'channels · per-channel')+' performance · click header to sort';
+  document.getElementById('sv-chan-sub').textContent='Top 10 '+(isCour?'shipping couriers · orders, delivery & return rate':'channels · per-channel performance')+' · click header to sort';
+  document.getElementById('sv-channel-table').classList.toggle('sv-courier-mode',isCour);
+  if(isCour&&(_svChannelSortKey==='aov'||_svChannelSortKey==='disc_pct')) _svChannelSortKey='orders';
   document.querySelectorAll('#sv-chan-pills button').forEach(b=>b.classList.toggle('active',b.dataset.m===_svChanMode));
   if(!DATA.length){
     tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--ink-soft);">'+(isCour?'No courier data — deploy webapp v17 (new module seller_courier_performance)':'No channel data — webapp modules pending deployment')+'</td></tr>';
@@ -4876,8 +4882,8 @@ function svRenderChannelTable(){
     return `<tr>
       <td><strong>${r.channel||'—'}</strong></td>
       <td>${fmtCount(r.orders)}</td>
-      <td class="sv-num">${fmtRev(r.aov)}</td>
-      <td class="${disc>10?'sv-red':disc>5?'sv-amber':'sv-green'}">${disc.toFixed(1)}%</td>
+      <td class="sv-num sv-aovcol">${fmtRev(r.aov)}</td>
+      <td class="sv-aovcol ${disc>10?'sv-red':disc>5?'sv-amber':'sv-green'}">${disc.toFixed(1)}%</td>
       <td class="${del>=85?'sv-green':del>=75?'sv-amber':'sv-red'}">${del.toFixed(1)}%</td>
       <td class="${ret<8?'sv-green':ret<=15?'sv-amber':'sv-red'}">${ret.toFixed(1)}%</td>
     </tr>`;
@@ -4887,8 +4893,8 @@ function svRenderChannelTable(){
   const wavg=(key)=>sorted.reduce((s,r)=>s+(parseFloat(r[key])||0)*(parseInt(r.orders)||0),0)/totalOrders;
   tfoot.innerHTML=`<tr>
     <td>Weighted Avg</td><td>${fmtCount(totalOrders)}</td>
-    <td>${fmtRev(sorted.reduce((s,r)=>s+(parseFloat(r.aov)||0)*(parseInt(r.orders)||0),0)/totalOrders)}</td>
-    <td class="${wavg('disc_pct')>10?'sv-red':wavg('disc_pct')>5?'sv-amber':'sv-green'}">${wavg('disc_pct').toFixed(1)}%</td>
+    <td class="sv-aovcol">${fmtRev(sorted.reduce((s,r)=>s+(parseFloat(r.aov)||0)*(parseInt(r.orders)||0),0)/totalOrders)}</td>
+    <td class="sv-aovcol ${wavg('disc_pct')>10?'sv-red':wavg('disc_pct')>5?'sv-amber':'sv-green'}">${wavg('disc_pct').toFixed(1)}%</td>
     <td class="${wavg('del_rate')>=85?'sv-green':wavg('del_rate')>=75?'sv-amber':'sv-red'}">${wavg('del_rate').toFixed(1)}%</td>
     <td class="${wavg('ret_rate')<8?'sv-green':wavg('ret_rate')<=15?'sv-amber':'sv-red'}">${wavg('ret_rate').toFixed(1)}%</td>
   </tr>`;
