@@ -990,8 +990,11 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     <select id="inv-inv-type"><option value="All">All Types</option><option>GOOD_INVENTORY</option><option>BAD_INVENTORY</option><option>QC_REJECTED</option></select>
     <div class="filter-divider"></div>
     <span class="date-label">Snapshot</span>
-    <input type="date" id="inv-snapshot" />
-    <button class="btn-filter" onclick="loadInventory()">Apply</button>
+    <input type="hidden" id="inv-snapshot" />
+    <span class="date-label">From</span><input type="date" id="inv-from" />
+    <span class="date-label">To</span><input type="date" id="inv-to" />
+    <button class="btn-filter" onclick="invApplyCustom()">Apply</button>
+    <div class="inv-rng" id="inv-snap-pills"><button class="active" data-s="today">Today</button><button data-s="15">Last 15 days</button><button data-s="30">Last 30 days</button></div>
   </div>
 
   <!-- KPI Row -->
@@ -3007,6 +3010,31 @@ const INV_TREND_CFG = {
 const INV_RANGE_SUB = { mtd:'Daily snapshot (month to date)', monthly:'Month-end snapshot, since inventory tracking began', quarterly:'Quarter-end snapshot, since inventory tracking began' };
 window._invTrendKey = 'total';
 window._invRange = 'mtd';
+window._invSnap = 'today';            // today | 15 | 30 | custom
+const _isoDay = d => d.toISOString().split('T')[0];
+function _invSnapRange() {            // → {from,to}; KPIs / charts use the snapshot at `to`, the trend draws from..to
+  const t = new Date(), today = _isoDay(t), m = window._invSnap;
+  if (m === 'today') return { from:today, to:today };
+  if (m === '15' || m === '30') { const d = new Date(t); d.setDate(d.getDate() - (parseInt(m,10)-1)); return { from:_isoDay(d), to:today }; }
+  let f = document.getElementById('inv-from').value, e = document.getElementById('inv-to').value;
+  if (!f && !e) { window._invSnap = 'today'; return { from:today, to:today }; }
+  if (!f) f = e; if (!e) e = f;
+  if (f > e) { const x = f; f = e; e = x; }
+  return { from:f, to:e };
+}
+function _invSyncSnapPills() {
+  document.querySelectorAll('#inv-snap-pills button').forEach(b=>b.classList.toggle('active', b.dataset.s===window._invSnap));
+}
+function invApplyCustom() {           // Apply with dates → custom range, preset pills unselect; no dates → back to Today
+  const hasDates = document.getElementById('inv-from').value || document.getElementById('inv-to').value;
+  window._invSnap = hasDates ? 'custom' : 'today';
+  _invSyncSnapPills(); loadInventory();
+}
+document.querySelectorAll('#inv-snap-pills button').forEach(b=>b.addEventListener('click',()=>{
+  window._invSnap = b.dataset.s;
+  document.getElementById('inv-from').value = ''; document.getElementById('inv-to').value = '';   // presets clear the custom dates
+  _invSyncSnapPills(); loadInventory();
+}));
 
 function _invBucket(rows, mode) {           // rows: daily [{date,total,good,blocked,bad}] → last snapshot per month / quarter
   const out = new Map();
@@ -3034,11 +3062,11 @@ function renderInvTrend() {
   const V = window._invViz; if (!V) return;
   const cfg = INV_TREND_CFG[window._invTrendKey] || INV_TREND_CFG.total;
   const mode = window._invRange;
-  if (mode !== 'mtd' && !V.trendAll) {
+  if (mode !== 'mtd' && mode !== 'range' && !V.trendAll) {
     _invLoadAllTrend(V).then(()=>{ if (V === window._invViz) renderInvTrend(); });
     return;
   }
-  const shown = mode==='mtd' ? V.trend.map(r=>({ ...r, label:r.date }))
+  const shown = (mode==='mtd'||mode==='range') ? V.trend.map(r=>({ ...r, label:r.date }))
                              : _invBucket(V.trendAll, mode);
   V.trendShown = { mode, rows:shown };       // what the chart is drawing right now — the Excel export reads this
   const ds = invTrendChart.data.datasets[0];
@@ -3046,7 +3074,7 @@ function renderInvTrend() {
   ds.data = shown.map(r=>r[cfg.field]);
   ds.label = cfg.label; ds.borderColor = cfg.color; ds.backgroundColor = cfg.fill; ds.pointBackgroundColor = cfg.color;
   invTrendChart.update();
-  const sub = document.getElementById('inv-trend-sub'); if (sub) sub.textContent = INV_RANGE_SUB[mode] + ' — ' + cfg.what;
+  const sub = document.getElementById('inv-trend-sub'); if (sub) sub.textContent = (mode==='range' ? 'Daily snapshots '+V.trendFrom+' to '+V.trendTo : INV_RANGE_SUB[mode]) + ' — ' + cfg.what;
   document.querySelectorAll('#inv-trend-pills .metric-btn').forEach(b=>{
     b.className = 'metric-btn' + (b.dataset.k===window._invTrendKey ? ' '+INV_TREND_CFG[b.dataset.k].cls : '');
   });
@@ -3056,7 +3084,10 @@ document.querySelectorAll('#inv-trend-pills .metric-btn').forEach(b=>{
   b.addEventListener('click', ()=>{ window._invTrendKey = b.dataset.k; renderInvTrend(); });
 });
 document.querySelectorAll('#inv-range-pills button').forEach(b=>{
-  b.addEventListener('click', ()=>{ window._invRange = b.dataset.r; renderInvTrend(); });
+  b.addEventListener('click', ()=>{
+    window._invRange = b.dataset.r;
+    if (window._invSnap !== 'today' && b.dataset.r === 'mtd') { window._invSnap='today'; document.getElementById('inv-from').value=''; document.getElementById('inv-to').value=''; _invSyncSnapPills(); loadInventory(); return; }
+    renderInvTrend(); });
 });
 
 function getInvFilters() {
@@ -3073,6 +3104,8 @@ async function loadInventory() {
     const el = document.getElementById(id); if(el) el.textContent = '—';
   });
 
+  const _rg = _invSnapRange(); _invSyncSnapPills();
+  document.getElementById('inv-snapshot').value = _rg.to;
   const f = getInvFilters();
   const params = { client: f.client, city: f.city };
   if (f.invType && f.invType !== 'All') params.invType = f.invType;
@@ -3081,7 +3114,10 @@ async function loadInventory() {
   // MTD range for trend
   const today = new Date(); const todayStr = today.toISOString().split('T')[0];
   const mtdStart = todayStr.substring(0,8)+'01'; // first of current month
-  const trendParams = {...params, dateFrom: mtdStart, dateTo: todayStr};
+  const isRange = window._invSnap !== 'today';
+  const tFrom = isRange ? _rg.from : mtdStart, tTo = isRange ? _rg.to : todayStr;
+  if (isRange) window._invRange = 'range'; else if (window._invRange === 'range') window._invRange = 'mtd';
+  const trendParams = {...params, dateFrom: tFrom, dateTo: tTo};
 
   // Expiry-at-Risk + Dead Stock always use latest snapshot regardless of user date filter.
   // invWhere defaults to MAX(snapshot_date) when no snapshotDate is passed.
@@ -3104,7 +3140,7 @@ async function loadInventory() {
   // KPI boxes, donut, trend, client / FC / category charts and all their Excel exports read these same fields.
   const _n = v => parseFloat(v)||0;
   const _bk = r => ({ good:_n(r.good_qty), blocked:_n(r.blocked_qty), bad:_n(r.bad_qty), total:_n(r.total_qty) });
-  window._invViz = { params, trendFrom:mtdStart, trendTo:todayStr, kpi:null, byType:byType||[], trend:[], byClient:[], byFacility:[], byCat:[] };
+  window._invViz = { params, trendFrom:tFrom, trendTo:tTo, isRange, kpi:null, byType:byType||[], trend:[], byClient:[], byFacility:[], byCat:[] };
   const V = window._invViz;
 
   if (kpi && kpi.bad_qty !== undefined) {
@@ -3201,10 +3237,10 @@ async function exportInvViz(key) {
       const T = V.trendShown; if (!T) { alert('Inventory data is still loading — please try again in a moment.'); return; }
       // exactly what the chart is showing: MTD = daily rows; Monthly / Quarterly = period-end (closing) rows
       const rows = T.rows.map(r=>{
-        const o = T.mode==='mtd' ? {} : { 'Period':r.period };
+        const o = (T.mode==='mtd'||T.mode==='range') ? {} : { 'Period':r.period };
         return { ...o, 'Snapshot Date':r.date, 'Total':r.total, 'Good Inventory':r.good, 'Blocked':r.blocked, 'QC Rejected / Bad':r.bad };
       });
-      const nm = T.mode==='mtd' ? 'inventory_trend_'+V.trendFrom+'_to_'+V.trendTo+'.csv' : 'inventory_trend_'+T.mode+'.csv';
+      const nm = (T.mode==='mtd'||T.mode==='range') ? 'inventory_trend_'+V.trendFrom+'_to_'+V.trendTo+'.csv' : 'inventory_trend_'+T.mode+'.csv';
       downloadCsv(jsonToCsv(rows), nm); return;
     }
     if (key === 'inv_type') {
@@ -3787,7 +3823,7 @@ window.addEventListener('load',async()=>{
   // instead of two competing ones.
   // Set today as default snapshot for inventory
   const todayDate = new Date().toISOString().split('T')[0];
-  document.getElementById('inv-snapshot').value = todayDate;
+  document.getElementById('inv-snapshot').value = todayDate;   // inv-from / inv-to stay empty → Today preset is the default
 
   // MTD defaults for Putaway and GRN sections
   const _ptaFrom = document.getElementById('pta-from');
