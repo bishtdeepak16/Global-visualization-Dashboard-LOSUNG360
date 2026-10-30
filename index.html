@@ -1022,9 +1022,9 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   </div>
 
   <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Stock Composition</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
-  <div class="grid grid-2b" style="margin-bottom:14px;">
+  <div class="grid grid-2b" id="inv-grid-top" style="margin-bottom:14px;">
     <!-- Inventory Type Split donut -->
-    <div class="panel">
+    <div class="panel" id="inv-pnl-type">
       <div class="panel-head">
         <div class="panel-head-left"><div class="panel-title">Inventory Type Split</div><div class="panel-sub">Good · Blocked · QC Rejected / Bad</div></div>
         <button class="btn-viz-export" onclick="exportInvViz('inv_type')">↓ Export Excel</button>
@@ -1045,7 +1045,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       </div>
     </div>
     <!-- Stock Trend line -->
-    <div class="panel">
+    <div class="panel" id="inv-pnl-trend">
       <div class="panel-head">
         <div class="panel-head-left"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><div class="panel-title">Stock Trend over Time</div>
           <div class="inv-rng" id="inv-range-pills"><button class="active" data-r="mtd">MTD</button><button data-r="quarterly">Quarterly</button><button data-r="monthly">Monthly</button></div></div>
@@ -1059,13 +1059,13 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <button class="metric-btn" data-k="bad"><span class="mbdot" style="background:var(--red)"></span>QC Rejected / Bad</button>
       </div>
       <div id="load-inv-trend" class="loader-wrap"><div class="spin-ring"></div></div>
-      <div style="height:170px;"><canvas id="chartInvTrend"></canvas></div>
+      <div id="inv-trend-box" style="height:170px;"><canvas id="chartInvTrend"></canvas></div>
     </div>
   </div>
 
-  <div class="section-divider"><div class="sd-line"></div><div class="sd-label">Distribution</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
-  <div class="grid grid-2b" style="margin-bottom:14px;">
-    <div class="panel">
+  <div class="section-divider"><div class="sd-line"></div><div class="sd-label" id="inv-dist-label">Distribution</div><div class="sd-line" style="background:linear-gradient(90deg,var(--line),var(--orange))"></div></div>
+  <div class="grid grid-2b" id="inv-grid-dist" style="margin-bottom:14px;">
+    <div class="panel" id="inv-pnl-client">
       <div class="panel-head">
         <div class="panel-head-left"><div class="panel-title">Client-wise Stock</div><div class="panel-sub">Good inventory by client</div></div>
         <button class="btn-viz-export" onclick="exportInvViz('inv_client')">↓ Export Excel</button>
@@ -1073,7 +1073,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <div id="load-inv-client" class="loader-wrap"><div class="spin-ring"></div></div>
       <div style="height:260px;"><canvas id="chartInvClient"></canvas></div>
     </div>
-    <div class="panel">
+    <div class="panel" id="inv-pnl-facility">
       <div class="panel-head">
         <div class="panel-head-left"><div class="panel-title">Facility-wise Stock</div><div class="panel-sub">Good · Blocked · QC Rejected / Bad by FC</div></div>
         <button class="btn-viz-export" onclick="exportInvViz('inv_facility')">↓ Export Excel</button>
@@ -3097,7 +3097,29 @@ function getInvFilters() {
            snapshotDate: document.getElementById('inv-snapshot').value };
 }
 
+// One client selected → Client-wise Stock has nothing to compare, so: [Type Split | Facility-wise] on top, Stock Trend full width below.
+// All Clients → original layout (Type Split | Trend, then Client | Facility).
+function _invApplyLayout(single) {
+  if (window._invSingleLayout === single) return;
+  window._invSingleLayout = single;
+  const top=document.getElementById('inv-grid-top'), dist=document.getElementById('inv-grid-dist');
+  const pT=document.getElementById('inv-pnl-trend'), pC=document.getElementById('inv-pnl-client'), pF=document.getElementById('inv-pnl-facility');
+  if (!top||!dist||!pT||!pC||!pF) return;
+  if (single) {
+    top.appendChild(pF); dist.appendChild(pT); pC.style.display='none';
+    dist.style.gridTemplateColumns='1fr';
+    document.getElementById('inv-dist-label').textContent='Stock Trend';
+    document.getElementById('inv-trend-box').style.height='280px';
+  } else {
+    top.appendChild(pT); dist.appendChild(pC); dist.appendChild(pF); pC.style.display='';
+    dist.style.gridTemplateColumns='';
+    document.getElementById('inv-dist-label').textContent='Distribution';
+    document.getElementById('inv-trend-box').style.height='170px';
+  }
+  setTimeout(()=>{ [invTrendChart,invFacilityChart,invClientChart].forEach(c=>{ try{ c&&c.resize(); }catch(e){} }); },50);
+}
 async function loadInventory() {
+  _invApplyLayout(document.getElementById('inv-client').value !== 'All');
   const _tok = _startLoad('inv');
   ['load-inv-trend','load-inv-client','load-inv-facility','load-inv-cat'].forEach(showLoader);
   ['inv-kpi-onhand','inv-kpi-blocked','inv-kpi-damaged','inv-kpi-health'].forEach(id => {
